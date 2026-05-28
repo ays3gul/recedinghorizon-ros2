@@ -14,66 +14,30 @@ from utils.py_utils import numpy_to_pose
 from utils.sdf_spawner import SDFSpawner
 
 
+
+# Gazebo world: box.world (model:=box)
+# Box pose in world file: <pose>0.5 -0.4 1.1 0 0 0</pose>
+# Box size: 0.15 x 0.15 x 0.15 m, red color
 # ---------------------------------------------------------------------------
-# Target object geometry
-# ---------------------------------------------------------------------------
-# A simple 15 cm cube placed at the same position as the bunny was.
-# Adjust BOX_SIZE if you use a different object in Gazebo.
-#
-# In your Gazebo world file, spawn a red box like this:
-#
-#   <model name="target_box">
-#     <pose>0.5 -0.4 1.0 0 0 0</pose>
-#     <static>0</static>
-#     <link name="link">
-#       <gravity>0</gravity>
-#       <collision name="collision">
-#         <geometry><box><size>0.15 0.15 0.15</size></box></geometry>
-#       </collision>
-#       <visual name="visual">
-#         <geometry><box><size>0.15 0.15 0.15</size></box></geometry>
-#         <material>
-#           <ambient>0.8 0.1 0.1 1</ambient>   <!-- red for color segmentation -->
-#           <diffuse>0.8 0.1 0.1 1</diffuse>
-#         </material>
-#       </visual>
-#     </link>
-#   </model>
-#
-# The color segmentation in perceiver.py already looks for red (HSV 0-10),
-# so no changes are needed there.
-# ---------------------------------------------------------------------------
-BOX_CENTER = np.array([0.5, -0.10, 1.075])   # base at z=1.0, half-size=0.075
-BOX_SIZE   = np.array([0.15, 0.15, 0.15])   # [x, y, z] in metres
-SURFACE_SAMPLES_PER_FACE = 10               # n×n grid per face  (6×100 = 600 pts)
+BOX_CENTER = np.array([0.5, -0.4, 1.1])     # same as bunny target_position
+BOX_SIZE   = np.array([0.15, 0.15, 0.15])   # 15 cm cube
+SURFACE_SAMPLES_PER_FACE = 20               # n×n grid → spacing ≈ 7.9mm
 
 
 class ViewpointPlanningBox:
     """
-    Viewpoint planning pipeline — identical to ViewpointPlanning but uses a
-    simple box as the target object instead of the Stanford Bunny mesh.
-
-    Differences from viewpoint_planning.py
-    ---------------------------------------
-    * get_mesh_coordinates() generates box surface points analytically —
-      no .dae file needed, no XML parsing.
-    * grid_size is smaller (box is ~15 cm, bunny was ~30 cm).
-    * r_max is tightened slightly to keep the camera close to the small target.
-    * target_position / BOX_CENTER reflect the box pose (z centre = 1.075).
-    * Class is renamed ViewpointPlanningBox so both files can be imported
-      simultaneously without conflict.
+    Viewpoint planning pipeline for a simple box target.
+    Uses identical parameters to the bunny experiment — only the mesh
+    generation is different (analytical box surface vs .dae parsing).
     """
 
     def __init__(self, lr=None):
-        # ROS
         self.arm_control = ArmControlClient()
         self.perceiver = Perceiver()
         self.viewpoint_sampler = ViewpointSampler()
         self.sdf_spawner = SDFSpawner()
 
         self.lr = lr
-
-        # Box centre — note z=1.075 (bottom at 1.0, top at 1.15)
         self.target_position = BOX_CENTER.copy()
 
         self.config()
@@ -81,6 +45,7 @@ class ViewpointPlanningBox:
 
         start_time = time.time()
         self.rh_planner = RHPlannerBox(
+            # --- identical to bunny ---
             grid_size=self.grid_size,
             grid_center=self.grid_center,
             image_size=self.image_size,
@@ -97,15 +62,16 @@ class ViewpointPlanningBox:
             bias_ratio=0.7,
             discount=0.85,
             r_min=0.15,
-            r_max=0.35,
+            r_max=0.45,
             occlusion_bonus=2.0,
             stagnation_patience=4,
-            voxel_size=np.array([0.010]),   # 10 mm — matches box mesh spacing
-            robot_reach_bounds=np.array([[0.30, -0.25, 0.97], [0.65, 0.40, 1.25]]),
+            robot_reach_bounds=np.array([[0.30, -0.15, 0.97], [0.65, 0.05, 1.25]]),
+            # --- box-specific: voxel_size matches mesh spacing ---
+            voxel_size=np.array([0.008]),
         )
         init_time_rh = time.time() - start_time
 
-        # Metric arrays — same structure as original
+        # Metric arrays
         self.losses_rh              = np.array([0.0])
         self.cumulative_time_rh     = np.array([init_time_rh])
         self.coverages_rh           = np.array([0.0])
@@ -121,35 +87,33 @@ class ViewpointPlanningBox:
         print(
             f"[RH-Box] K={self.rh_planner.num_candidates}, "
             f"H={self.rh_planner.horizon} -> "
-            f"evals/iter={self.rh_planner.num_candidates * self.rh_planner.horizon}"
+            f"iter={self.rh_planner.num_candidates * self.rh_planner.horizon}"
         )
         print(
             f"[RH-Box] Target: box {BOX_SIZE*100} cm  "
-            f"centre={BOX_CENTER}  "
-            f"mesh_pts={len(self.mesh_coordinates)}"
+            f"centre={BOX_CENTER}  mesh_pts={len(self.mesh_coordinates)}"
         )
 
     # ------------------------------------------------------------------
-    # Config
+    # Config — identical to bunny
     # ------------------------------------------------------------------
     def config(self):
-        """Configure scene, robot start pose, voxel grid, and camera intrinsics."""
-        # Uncomment exactly one scenario:
+        # Choose exactly one occlusion scenario:
         self.spawn_no_occlusion()
-        #self.spawn_wall_occlusion()    # sanity check — back face hidden, max 83.3%
         # self.spawn_easy_occlusion()
         # self.spawn_hard_occlusion()
         # self.spawn_extreme_occlusion()
         # self.spawn_complex_occlusion()
 
+        # Same start pose logic as bunny
         self.camera_pose = self.viewpoint_sampler.predefine_start_pose(
             self.target_position
         )
         if self.arm_control:
             self.arm_control.move_arm_to_pose(numpy_to_pose(self.camera_pose))
 
-        # Grid is tighter than bunny — box is ~15 cm, keep some margin
-        self.grid_size   = np.array([0.25, 0.25, 0.25])
+        # Same grid as bunny
+        self.grid_size   = np.array([0.3, 0.6, 0.3])
         self.grid_center = self.target_position
 
         camera_info      = self.perceiver.get_camera_info()
@@ -157,63 +121,30 @@ class ViewpointPlanningBox:
         self.intrinsics  = np.array(camera_info.K).reshape(3, 3)
 
     # ------------------------------------------------------------------
-    # Occlusion scenarios
-    # (positions re-calibrated for the box target at [0.5, -0.4, 1.075])
+    # Occlusion scenarios — same positions as bunny
     # ------------------------------------------------------------------
     def spawn_no_occlusion(self):
-        """Control case: no occluding object spawned."""
         pass
 
-    def spawn_wall_occlusion(self):
-        """
-        Sanity-check occlusion: thin wall (box.sdf = 0.3×0.03×0.3 m) flush
-        against the back face of the target box (y+ side).
-
-        Geometry
-        --------
-        box.sdf size         : 0.3 (x) × 0.03 (y) × 0.3 (z)
-        box.sdf half-depth   : 0.015 m
-
-        Target box centre    : x=0.5   y=-0.400  z=1.075
-        Target back face     : y = -0.400 + 0.075 = -0.325
-        Wall centre          : y = -0.325 + 0.015 = -0.310
-
-        spawn_box() subtracts 0.024 from z internally (Gazebo offset),
-        so we pass z = 1.075 + 0.024 = 1.099 to compensate.
-
-        Expected result
-        ---------------
-        Back face (1/6) permanently hidden  →  max observable ≈ 83.3 %
-        Coverage > 83 % → mesh/voxel misalignment bug
-        Coverage < 60 % → planner not exploring enough
-        """
-        wall_center = np.array([0.5, -0.310, 1.075 + 0.024])
-        self.sdf_spawner.spawn_box(wall_center, 99)
-
     def spawn_easy_occlusion(self):
-        """Single box, offset slightly to the side of the target."""
-        self.sdf_spawner.spawn_box(np.array([0.65, -0.30, 1.075]), 1)
+        self.sdf_spawner.spawn_box(np.array([0.65, -0.3, 1.1]), 1)
 
     def spawn_hard_occlusion(self):
-        """Single box, closer and more centred in front of the target."""
-        self.sdf_spawner.spawn_box(np.array([0.60, -0.25, 1.075]), 1)
+        self.sdf_spawner.spawn_box(np.array([0.6, -0.25, 1.1]), 1)
 
     def spawn_extreme_occlusion(self):
-        """Two stacked boxes aligned in front of the target."""
-        self.sdf_spawner.spawn_box(np.array([0.60, -0.30, 1.075]), 1)
-        self.sdf_spawner.spawn_box(np.array([0.60, -0.30, 1.175]), 2)
+        self.sdf_spawner.spawn_box(np.array([0.6, -0.3, 1.1]), 1)
+        self.sdf_spawner.spawn_box(np.array([0.6, -0.3, 1.2]), 2)
 
     def spawn_complex_occlusion(self):
-        """Three-object occlusion setup (same layout as bunny experiment)."""
-        self.sdf_spawner.spawn_box(np.array([0.73, -0.25, 0.95]),  1)
-        self.sdf_spawner.spawn_bar(np.array([0.50, -0.22, 1.00]),  2)
-        self.sdf_spawner.spawn_box(np.array([0.60, -0.32, 1.30]),  3)
+        self.sdf_spawner.spawn_box(np.array([0.73, -0.25, 0.95]), 1)
+        self.sdf_spawner.spawn_bar(np.array([0.5,  -0.22, 1.0]),  2)
+        self.sdf_spawner.spawn_box(np.array([0.6,  -0.32, 1.3]),  3)
 
     # ------------------------------------------------------------------
-    # RH execution — identical to original run_rh()
+    # RH execution — identical to bunny run_rh()
     # ------------------------------------------------------------------
     def run_rh(self):
-        """Run one Receding Horizon NBV iteration and log metrics."""
         start_time = time.time()
         current_coverage = float(self.coverages_rh[-1]) if len(self.coverages_rh) > 0 else 0.0
         self.camera_pose, loss, n_evals = self.rh_planner.rh_view(
@@ -240,7 +171,6 @@ class ViewpointPlanningBox:
                 self.trajectory_distance_rh[-1] + self._last_step_distance(),
             )
         else:
-            # Auto-shrink reach bounds on arm failure
             failed_pos = self.camera_pose[:3]
             if self.rh_planner.robot_reach_bounds is not None:
                 bounds = self.rh_planner.robot_reach_bounds.cpu().numpy().copy()
@@ -252,8 +182,7 @@ class ViewpointPlanningBox:
                 self.rh_planner.robot_reach_bounds = torch.tensor(
                     bounds, dtype=torch.float32, device=self.rh_planner.device
                 )
-                print(f"[Box-VP] Reach bounds tightened: y=[{bounds[0][1]:.3f},{bounds[1][1]:.3f}]")
-            # Reset to last good position
+                print(f'[Box-VP] Reach bounds tightened: y=[{bounds[0][1]:.3f},{bounds[1][1]:.3f}]')
             if len(self.trail_rh) >= 2:
                 self.rh_planner.current_pos = torch.tensor(
                     self.trail_rh[-2], dtype=torch.float32,
@@ -276,7 +205,7 @@ class ViewpointPlanningBox:
         self.precision_rh = np.append(self.precision_rh, precision)
         self.ray_calls_rh = np.append(self.ray_calls_rh, self.rh_planner.ray_trace_count)
 
-        sigma     = self.rh_planner.compute_sigma()
+        sigma      = self.rh_planner.compute_sigma()
         self.sigma_rh = np.append(self.sigma_rh, sigma)
 
         occ_recall = self.rh_planner.compute_occluded_recall()
@@ -284,8 +213,7 @@ class ViewpointPlanningBox:
 
         total_occluded = (
             len(self.rh_planner.occluded_mesh_points)
-            if self.rh_planner.occluded_mesh_points is not None
-            else 0
+            if self.rh_planner.occluded_mesh_points is not None else 0
         )
         recovered = int(occ_recall * total_occluded) if total_occluded > 0 else 0
 
@@ -298,7 +226,6 @@ class ViewpointPlanningBox:
             f"         Occluded recall: {occ_recall*100:.1f}% "
             f"({recovered}/{total_occluded} mesh points recovered)"
         )
-
         return coverage, loss, f1, recall, precision, n_evals
 
     # ------------------------------------------------------------------
@@ -314,7 +241,6 @@ class ViewpointPlanningBox:
         return math.sqrt(sum((p2[i] - p1[i]) ** 2 for i in range(3)))
 
     def get_rh_metrics(self):
-        """Return all RH metrics collected so far."""
         return {
             "losses":               self.losses_rh,
             "cumulative_time":      self.cumulative_time_rh,
@@ -330,22 +256,16 @@ class ViewpointPlanningBox:
         }
 
     # ------------------------------------------------------------------
-    # Mesh coordinates — analytical box surface, no .dae file needed
+    # Mesh coordinates — analytical box surface
     # ------------------------------------------------------------------
     def get_mesh_coordinates(self):
         """
-        Generate ground-truth surface points for a box analytically.
-
-        The box has dimensions BOX_SIZE centred at BOX_CENTER.
-        Points are sampled on an n×n grid on each of the 6 faces,
-        then deduplicated so edge/corner points are not double-counted.
-
-        This replaces the COLLADA-parsing used for the bunny and is
-        much easier to verify visually: you should see a clean cube
-        in any 3D plot of mesh_coordinates.
+        Generate ground-truth surface points for the box analytically.
+        6 faces, n×n grid per face, spacing ≈ BOX_SIZE/(n-1) ≈ 7.9mm.
+        This matches voxel_size=0.008m used in RHPlannerBox.
         """
         cx, cy, cz = BOX_CENTER
-        hx, hy, hz = BOX_SIZE / 2.0          # half-extents
+        hx, hy, hz = BOX_SIZE / 2.0
         n = SURFACE_SAMPLES_PER_FACE
 
         lin_x = np.linspace(cx - hx, cx + hx, n)
@@ -353,17 +273,17 @@ class ViewpointPlanningBox:
         lin_z = np.linspace(cz - hz, cz + hz, n)
 
         pts = []
-        # +X / -X faces  (left / right)
+        # +X / -X faces
         for y in lin_y:
             for z in lin_z:
                 pts.append([cx + hx, y, z])
                 pts.append([cx - hx, y, z])
-        # +Y / -Y faces  (back / front)
+        # +Y / -Y faces
         for x in lin_x:
             for z in lin_z:
-                pts.append([x, cy + hy, z])   # back face ✓
-                pts.append([x, cy - hy, z])   # front face ✓
-        # +Z / -Z faces  (top / bottom)
+                pts.append([x, cy + hy, z])
+                pts.append([x, cy - hy, z])
+        # +Z / -Z faces
         for x in lin_x:
             for y in lin_y:
                 pts.append([x, y, cz + hz])
@@ -372,10 +292,10 @@ class ViewpointPlanningBox:
         mesh_coordinates = np.unique(np.array(pts, dtype=np.float64), axis=0)
         mesh_tree = KDTree(mesh_coordinates)
 
-        back_face_y = round(cy + hy, 4)
         print(
             f"[RH-Box] Box mesh: {len(mesh_coordinates)} surface points  "
-            f"(6 faces, no occlusion)\n"
-            f"         Theoretical max coverage = 100 %"
+            f"(6 faces, spacing≈{BOX_SIZE[0]/(n-1)*1000:.1f}mm, "
+            f"voxel_size=8mm)"
         )
+        print(f"         Theoretical max coverage = 100 %")
         return mesh_coordinates, mesh_tree

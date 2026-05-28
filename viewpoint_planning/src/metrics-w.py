@@ -32,7 +32,7 @@ import os
 
 def compute_all_metrics(coverages, recalls, precisions, distances, times,
                         ray_calls, method_name, occlusion_type, params,
-                        target_voxels=None, mesh_coordinates=None, max_achievable_coverage=100.0):
+                        target_voxels=None, mesh_coordinates=None):
     """
     Compute all evaluation metrics from raw per-iteration arrays.
     
@@ -151,12 +151,6 @@ def compute_all_metrics(coverages, recalls, precisions, distances, times,
     coverage_at_key = {str(k): round(coverages[min(k, n - 1)], 2) for k in key_iters}
 
     # =========================================================
-    # VISIBILITY EFFICIENCY
-    # =========================================================
-
-    visibility_efficiency = round(coverages[-1] / max_achievable_coverage * 100, 1)
-
-    # =========================================================
     # BUILD RESULTS DICT
     # =========================================================
     results = {
@@ -181,7 +175,8 @@ def compute_all_metrics(coverages, recalls, precisions, distances, times,
         "total_time": round(times[-1], 1),
         "total_ray_calls": ray_calls[-1],
         
-        "visibility_efficiency": visibility_efficiency,
+        # Visibility efficiency: how much of the max achievable was covered
+        "visibility_efficiency": round(coverages[-1], 1),
 
 
         # High priority

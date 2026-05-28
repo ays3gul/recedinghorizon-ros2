@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hybrid RH+Gradient Planner Test — K=10, H=3, step=0.12, lambda=2.0"""
+""" K=10, H=3, step=0.12, lambda=2.0"""
 import rospy
 import numpy as np
 import os

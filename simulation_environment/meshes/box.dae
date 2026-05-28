@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <created>2024-01-01</created>
+    <modified>2024-01-01</modified>
+  </asset>
+  <library_geometries>
+    <geometry id="box-mesh" name="box">
+      <mesh>
+        <source id="box-mesh-positions">
+          <float_array id="box-mesh-positions-array" count="72">
+            <!-- 8 corners of a 0.15x0.15x0.15 box centred at origin -->
+            <!-- Gazebo will place it at [0.5, -0.4, 1.1] via world file -->
+            <!-- x: -0.075 to +0.075, y: -0.075 to +0.075, z: -0.075 to +0.075 -->
+            <!-- Face +X (x=0.075): 4 vertices -->
+             0.075 -0.075 -0.075
+             0.075  0.075 -0.075
+             0.075  0.075  0.075
+             0.075 -0.075  0.075
+            <!-- Face -X (x=-0.075): 4 vertices -->
+            -0.075 -0.075 -0.075
+            -0.075  0.075 -0.075
+            -0.075  0.075  0.075
+            -0.075 -0.075  0.075
+            <!-- Face +Y (y=0.075): 4 vertices -->
+            -0.075  0.075 -0.075
+             0.075  0.075 -0.075
+             0.075  0.075  0.075
+            -0.075  0.075  0.075
+            <!-- Face -Y (y=-0.075): 4 vertices -->
+            -0.075 -0.075 -0.075
+             0.075 -0.075 -0.075
+             0.075 -0.075  0.075
+            -0.075 -0.075  0.075
+            <!-- Face +Z (z=0.075): 4 vertices -->
+            -0.075 -0.075  0.075
+             0.075 -0.075  0.075
+             0.075  0.075  0.075
+            -0.075  0.075  0.075
+            <!-- Face -Z (z=-0.075): 4 vertices -->
+            -0.075 -0.075 -0.075
+             0.075 -0.075 -0.075
+             0.075  0.075 -0.075
+            -0.075  0.075 -0.075
+          </float_array>
+          <technique_common>
+            <accessor source="#box-mesh-positions-array" count="24" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="box-mesh-vertices">
+          <input semantic="POSITION" source="#box-mesh-positions"/>
+        </vertices>
+        <triangles count="12">
+          <input semantic="VERTEX" source="#box-mesh-vertices" offset="0"/>
+          <p>
+            0 1 2  0 2 3
+            4 6 5  4 7 6
+            8 9 10  8 10 11
+            12 14 13  12 15 14
+            16 17 18  16 18 19
+            20 22 21  20 23 22
+          </p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="box" name="box" type="NODE">
+        <instance_geometry url="#box-mesh"/>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#Scene"/>
+  </scene>
+</COLLADA>

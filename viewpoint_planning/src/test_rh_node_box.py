@@ -26,10 +26,18 @@ from metrics import compute_all_metrics, detect_occlusion_type, save_and_print
 from plots.plot_coverage import plot_coverage_progression
 from plots.plot_trajectory_3d import plot_3d_trajectory
 from plots.plot_reconstruction import plot_reconstruction_comparison
-
+import subprocess
 
 if __name__ == "__main__":
     rospy.init_node("rh_test_box")
+    # Spawn box at correct position via Gazebo service
+    subprocess.run([
+        "rosrun", "gazebo_ros", "spawn_model",
+        "-file", "/home/ayse/catkin_ws/src/PSO-for-perception-of-occluded-target-nodes/simulation_environment/worlds/box.world",
+        "-sdf", "-model", "target_box",
+        "-x", "0.5", "-y", "-0.4", "-z", "1.1"
+], check=False)
+
     NUM_ITERS = 12
     K, H = 10, 3
 

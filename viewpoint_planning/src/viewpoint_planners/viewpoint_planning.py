@@ -78,8 +78,6 @@ class ViewpointPlanning:
         )
 
     def config(self):
-        """Configure scene, robot start pose, voxel grid, and camera intrinsics."""
-        # Choose exactly one occlusion scenario.
         #self.spawn_no_occlusion()
         # self.spawn_easy_occlusion()
         # self.spawn_hard_occlusion()
@@ -125,9 +123,9 @@ class ViewpointPlanning:
         self.sdf_spawner.spawn_bar(np.array([0.5, -0.22, 1.0]), 2)
         self.sdf_spawner.spawn_box(np.array([0.6, -0.32, 1.3]), 3)
 
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------
     # RH execution
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------
     def run_rh(self):
         """Run one Receding Horizon NBV iteration and log RH-only metrics."""
         start_time = time.time()
@@ -210,7 +208,7 @@ class ViewpointPlanning:
         return coverage, loss, f1, recall, precision, n_evals
         
      
-    # HELPERS - WHY?
+    # HELPERS 
     def _clamp_to_rh_bounds(self, position):
         bounds = self.rh_planner.camera_bounds.detach().cpu().numpy()
         return np.clip(position, bounds[0], bounds[1])

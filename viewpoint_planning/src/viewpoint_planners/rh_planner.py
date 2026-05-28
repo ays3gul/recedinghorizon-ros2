@@ -180,15 +180,19 @@ class RHPlanner:
         hi = self.robot_reach_bounds[1]
         return bool(torch.all(pos >= lo) and torch.all(pos <= hi))
 
+    # Kamerayı Küre Üzerinde Tutuyor
+    # Yeni hesaplanan pozisyon küre dışına çıkarsa geri iter. 
+    # Hedeften olan yön korunur, sadece mesafe düzeltilir. 
+    # Bircher'da kamera herhangi bir yere gidebiliyordu ve "köşe tuzağına" düşüyordu — bu fonksiyon onu engeller.
     def _project_to_shell(self, pos: torch.Tensor) -> torch.Tensor:
         """Project pos onto the orbital shell [r_min, r_max] around target."""
-        vec  = pos - self.target_params
-        dist = torch.norm(vec)
+        vec  = pos - self.target_params  # yon vektoru = kamera - hedef 
+        dist = torch.norm(vec)  # suanki uzaklik
         if dist < 1e-6:
             vec  = torch.tensor([0.0, 1.0, 0.0], device=self.device)
             dist = torch.tensor(1.0, device=self.device)
         r = torch.clamp(dist, self.r_min, self.r_max)
-        return self.target_params + vec / dist * r
+        return self.target_params + vec / dist * r  # ayni yonde, dogru uzaklikta 
 
     # ------------------------------------------------------------------
     # Candidate generation — spherical + biased
@@ -204,6 +208,7 @@ class RHPlanner:
         )
         prev_pos = start_pos.clone()
 
+        # H adim uret
         for k in range(self.horizon):
             if torch.rand(1).item() < self.bias_ratio:
                 # Tangential step on sphere surface
