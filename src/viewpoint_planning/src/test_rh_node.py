@@ -1,32 +1,12 @@
 #!/usr/bin/env python3
 """
-test_rh_node.py — Burusa-aligned RH-NBV evaluation driver.
-
-Aligned with Burusa et al. (ICRA 2024), Table II (node reconstruction):
-  * Planning terminated at 5 viewpoints (NUM_ITERS = 5; view 0 is predefined).
-  * Fixed horizon H (no adaptive override) so ablation over H is controlled.
-  * Multiple trials per configuration with reproducible start variation,
-    then averaged — comparable to Burusa's 288-trial average.
-
-Output layout (every run is self-contained and never overwrites a prior run):
-
-  results/
-    run_<TIMESTAMP>_<occlusion>_K<K>_H<H>/
-        config.json                 # exact parameters of this run
-        trial_00/
-            metrics_rh_<occ>.json
-            coverage_rh_<occ>.png
-            trajectory_3d_rh_<occ>.png
-            candidates_iter2_<occ>.png
-            candidates_grid_<occ>.png
-            reconstruction_rh_<occ>.png
-        trial_01/ ...
-        summary.json                # per-trial finals + mean/std across trials
+test_rh_node.py — ROS 2 Jazzy / Burusa-aligned RH-NBV evaluation driver.
 
 Usage:
-    python3 test_rh_node.py                 # defaults: K=10 H=3, 1 trial
-    NUM_TRIALS=4 python3 test_rh_node.py    # 4 trials, averaged
-    RH_K=20 RH_H=2 RH_GAMMA=0.95 NUM_TRIALS=4 python3 test_rh_node.py   # ablation
+    ./run_ros2_gz.sh                        # defaults: K=10 H=3, 1 trial
+    NUM_TRIALS=4 ./run_ros2_gz.sh
+    RH_K=20 RH_H=2 OCC=well ./run_ros2_gz.sh
+    OCC=frontal EXPERIMENT=C ./run_ros2_gz.sh
 """
 import os
 import json
@@ -37,16 +17,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-import rospy
+import ros2_node  # ROS 2 singleton node (replaces rospy.init_node)
 
 from viewpoint_planners.viewpoint_planning import ViewpointPlanning
-import viewpoint_planners.viewpoint_planning as _vp_mod
-import scene_representation.voxel_grid as _vg_mod
-print("=== YUKLENEN DOSYALAR ===")
-print("viewpoint_planning ->", _vp_mod.__file__)
-print("voxel_grid ->", _vg_mod.__file__)
-print("=========================")
-
 from metrics import compute_all_metrics, detect_occlusion_type, save_and_print
 from plots.plot_coverage import plot_coverage_progression
 from plots.plot_trajectory_3d import plot_3d_trajectory
@@ -54,36 +27,34 @@ from plots.plot_candidate_sequences import (
     plot_candidate_sequences,
     plot_candidate_sequences_grid,
 )
-from plots.plot_reconstruction import plot_reconstruction_comparison
+from plots.plot_reconstruction import (
+    plot_reconstruction_comparison,
+    plot_reconstruction_evolution_grid,
+    plot_reconstruction_single_iter,
+)
 
+from viewpoint_planners.fair_comparison_config import BASE_SEED as FC_BASE_SEED
 
-# ----------------------------------------------------------------------
-# Configuration. Two Burusa experiments are supported:
-#   EXPERIMENT=D -> Table II (node reconstruction), default 5 viewpoints.
-#   EXPERIMENT=C -> Table I  (occlusion-handling),  default 20 viewpoints.
-# Overridable via env vars.
-# ----------------------------------------------------------------------
-EXPERIMENT = os.environ.get("EXPERIMENT", "C").upper()
-_default_iters = 20 if EXPERIMENT == "C" else 5      # Burusa: C=20, D=5
+EXPERIMENT = os.environ.get("EXPERIMENT", "D").upper()
+_default_iters = 20 if EXPERIMENT == "C" else 5
 NUM_ITERS  = int(os.environ.get("NUM_ITERS", _default_iters))
-NUM_TRIALS = int(os.environ.get("NUM_TRIALS", 1))    # trials to average over
-BASE_SEED  = int(os.environ.get("BASE_SEED", 42))    # reproducibility anchor
+NUM_TRIALS = int(os.environ.get("NUM_TRIALS", 1))
+BASE_SEED  = FC_BASE_SEED
 
 RH_PARAMS = {
-    "horizon":        int(os.environ.get("RH_H", 3)),          # H
-    "num_candidates": int(os.environ.get("RH_K", 10)),         # K
-    "lambda_cost":    float(os.environ.get("RH_LAMBDA", 2.0)), # lambda
-    "discount":       float(os.environ.get("RH_GAMMA", 0.85)), # gamma
-    "step_size":      float(os.environ.get("RH_STEP", 0.12)),
-    # SHELL=0 disables the spherical shell (Burusa-style box-only constraint).
-    "use_spherical_bounds": os.environ.get("SHELL", "1") != "0",
+    "horizon":        int(os.environ.get("RH_H", 3)),
+    "num_candidates": int(os.environ.get("RH_K", 10)),
+    "lambda_cost":    float(os.environ.get("RH_LAMBDA", 2.0)),
+    "discount":       float(os.environ.get("RH_GAMMA", 0.85)),
+    "step_size":      float(os.environ.get("RH_STEP", 0.065)),
+    "use_spherical_bounds": os.environ.get("RH_SHELL", "0") != "0",
+    "occlusion_bonus": float(os.environ.get("OCC_BONUS", 2.0)),
 }
 K = RH_PARAMS["num_candidates"]
 H = RH_PARAMS["horizon"]
 
 
 def make_run_dir(occ):
-    """Create a unique, self-contained directory for this run."""
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     shell = "shell" if RH_PARAMS["use_spherical_bounds"] else "box"
     name = f"run_{ts}_exp{EXPERIMENT}_{occ}_K{K}_H{H}_{shell}"
@@ -92,8 +63,7 @@ def make_run_dir(occ):
     return run_dir
 
 
-def save_plots(vp, occ, out_dir):
-    """Save all figures for a single trial into out_dir. Never raises."""
+def save_plots(vp, occ, out_dir, recon_snapshots=None):
     rh = vp.rh_planner
 
     def _try(fn, label):
@@ -137,15 +107,36 @@ def save_plots(vp, occ, out_dir):
         print("  [plot] skipping candidate plots (no candidate_history)")
 
     _try(lambda: plot_reconstruction_comparison(
-        target_voxels=rh.target_voxels,
+        target_voxels=(rh.all_target_voxels
+                       if getattr(rh, "all_target_voxels", None) is not None
+                       and len(rh.all_target_voxels) > 0
+                       else rh.target_voxels),
         mesh_coordinates=rh.mesh_coordinates,
         save_path=os.path.join(out_dir, f"reconstruction_rh_{occ}.png"),
         method_label="RH-NBV",
     ), "reconstruction")
 
+    if recon_snapshots:
+        _try(lambda: plot_reconstruction_evolution_grid(
+            voxel_snapshots=recon_snapshots,
+            mesh_coordinates=rh.mesh_coordinates,
+            save_path=os.path.join(out_dir, f"reconstruction_evolution_rh_{occ}.png"),
+            method_label="RH-NBV",
+        ), "reconstruction_evolution")
+
+        iter_dir = os.path.join(out_dir, "reconstruction_per_iter")
+        os.makedirs(iter_dir, exist_ok=True)
+        for i, snap in enumerate(recon_snapshots):
+            _try(lambda snap=snap, i=i: plot_reconstruction_single_iter(
+                target_voxels=snap,
+                mesh_coordinates=rh.mesh_coordinates,
+                iteration=i + 1,
+                save_path=os.path.join(iter_dir, f"reconstruction_rh_{occ}_view{i+1:02d}.png"),
+                method_label="RH-NBV",
+            ), f"reconstruction_view{i+1}")
+
 
 def run_single_trial(trial_idx, occ, run_dir):
-    """Run one full trial and return its results dict."""
     trial_seed = BASE_SEED + trial_idx
     trial_dir = os.path.join(run_dir, f"trial_{trial_idx:02d}")
     os.makedirs(trial_dir, exist_ok=True)
@@ -156,19 +147,25 @@ def run_single_trial(trial_idx, occ, run_dir):
           f"lambda={RH_PARAMS['lambda_cost']} | Occlusion: {occ}")
     print(f"{'='*60}\n")
 
-    # trial 0 uses the deterministic predefined start; later trials jitter it.
     seed_for_start = None if trial_idx == 0 else trial_seed
     vp = ViewpointPlanning(lr=0, trial_seed=seed_for_start, rh_params=RH_PARAMS)
 
+    recon_snapshots = []
     for i in range(NUM_ITERS):
         print(f"--- RH Iteration {i + 1}/{NUM_ITERS} ---")
-        # Turn on the F1 distance diagnostic on the final iteration only.
-        # F1 diagnostic only matters for Experiment D (Table II reconstruction).
         vp._diagnose_f1 = (EXPERIMENT == "D" and i == NUM_ITERS - 1)
         vp.run_rh()
+        rh = vp.rh_planner
+        snap = (rh.all_target_voxels
+                if getattr(rh, "all_target_voxels", None) is not None
+                and len(rh.all_target_voxels) > 0
+                else rh.target_voxels)
+        snap = (snap.copy() if isinstance(snap, np.ndarray) and snap.ndim == 2
+                else np.zeros((0, 3)))
+        recon_snapshots.append(snap)
 
     target_voxels = vp.rh_planner.target_voxels
-    mesh_coords   = vp.rh_planner.mesh_coordinates
+    mesh_coords = vp.rh_planner.mesh_coordinates
     if isinstance(target_voxels, np.ndarray) and target_voxels.ndim < 2:
         target_voxels = None
 
@@ -185,22 +182,19 @@ def run_single_trial(trial_idx, occ, run_dir):
         target_voxels=target_voxels,
         mesh_coordinates=mesh_coords,
     )
-    results["sigma_series"]          = vp.sigma_rh.tolist()
+    results["sigma_series"] = vp.sigma_rh.tolist()
     results["occluded_recall_series"] = vp.occluded_recall_rh.tolist()
-    results["tp_series"]             = vp.tp_rh.tolist()
-    results["fp_series"]             = vp.fp_rh.tolist()
-    results["fn_series"]             = vp.fn_rh.tolist()
+    results["tp_series"] = vp.tp_rh.tolist()
+    results["fp_series"] = vp.fp_rh.tolist()
+    results["fn_series"] = vp.fn_rh.tolist()
 
-    # Print Burusa-style table and save JSON inside the trial folder.
     save_and_print(results, prefix=os.path.join(trial_dir, "metrics"),
                    experiment=EXPERIMENT)
-    save_plots(vp, occ, trial_dir)
-
+    save_plots(vp, occ, trial_dir, recon_snapshots=recon_snapshots)
     return results
 
 
 def summarize(all_results, occ, run_dir):
-    """Aggregate per-trial finals into mean/std (Burusa-style averaging)."""
     def finals(key):
         return [r[key] for r in all_results]
 
@@ -230,7 +224,7 @@ def summarize(all_results, occ, run_dir):
                 "total_ray_calls", "coverage_auc"]:
         vals = np.array(finals(key), dtype=float)
         summary["mean"][key] = round(float(vals.mean()), 4)
-        summary["std"][key]  = round(float(vals.std()), 4)
+        summary["std"][key] = round(float(vals.std()), 4)
 
     path = os.path.join(run_dir, "summary.json")
     with open(path, "w") as f:
@@ -251,12 +245,12 @@ def summarize(all_results, occ, run_dir):
 
 
 if __name__ == "__main__":
-    rospy.init_node("rh_test")
+    # ROS 2: init node (replaces rospy.init_node)
+    ros2_node.init("rh_test")
 
     occ = detect_occlusion_type()
     run_dir = make_run_dir(occ)
 
-    # Persist the exact run configuration up front.
     with open(os.path.join(run_dir, "config.json"), "w") as f:
         json.dump({
             "experiment": EXPERIMENT,
@@ -280,3 +274,4 @@ if __name__ == "__main__":
 
     summarize(all_results, occ, run_dir)
     print("\nAll trials complete.")
+    ros2_node.shutdown()

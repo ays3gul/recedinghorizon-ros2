@@ -1,0 +1,137 @@
+{
+  "method": "RH-NBV",
+  "occlusion": "well",
+  "params": {
+    "horizon": 3,
+    "num_candidates": 10,
+    "lambda_cost": 2.0,
+    "discount": 0.85,
+    "step_size": 0.065,
+    "use_spherical_bounds": false,
+    "occlusion_bonus": 0.0,
+    "trial": 0,
+    "seed": 42
+  },
+  "num_iters": 5,
+  "coverages": [
+    0.0,
+    0.0,
+    50.38,
+    61.93,
+    67.04,
+    67.04
+  ],
+  "f1_scores": [
+    0.0,
+    0.0,
+    0.7915,
+    0.8166,
+    0.8408,
+    0.8408
+  ],
+  "recalls": [
+    0.0,
+    0.0,
+    0.655,
+    0.6919,
+    0.7276,
+    0.7276
+  ],
+  "precisions": [
+    0.0,
+    0.0,
+    1.0,
+    0.996,
+    0.9957,
+    0.9957
+  ],
+  "distances": [
+    0.0,
+    0.0,
+    0.2044,
+    0.2571,
+    0.3149,
+    0.5442
+  ],
+  "times": [
+    0.1,
+    198.8,
+    352.5,
+    491.8,
+    636.2,
+    775.8
+  ],
+  "ray_tracing_calls": [
+    0,
+    30,
+    60,
+    90,
+    120,
+    150
+  ],
+  "final_coverage": 67.04,
+  "final_f1": 0.8408,
+  "final_distance": 0.5442,
+  "total_time": 775.8,
+  "total_ray_calls": 150,
+  "visibility_efficiency": 67.0,
+  "coverage_auc": 42.58,
+  "hausdorff_distance": 0.088198,
+  "chamfer_distance": 0.015344,
+  "coverage_efficiency": 123.19,
+  "stagnation_count": 2,
+  "first_detection_iter": 2,
+  "views_to_threshold": {
+    "views_to_25pct": 2,
+    "views_to_50pct": 2,
+    "views_to_75pct": null
+  },
+  "views_to_f1_threshold": 2,
+  "coverage_at_key_iters": {
+    "0": 0.0,
+    "3": 61.93,
+    "6": 67.04,
+    "9": 67.04,
+    "5": 67.04
+  },
+  "sigma_series": [
+    0.0,
+    0.0,
+    0.05032522976398468,
+    0.051254648715257645,
+    0.05110470578074455,
+    0.05110470578074455
+  ],
+  "occluded_recall_series": [
+    0.0,
+    0.0,
+    0.0,
+    0.014978578670242338,
+    0.02567289138895248,
+    0.02567289138895248
+  ],
+  "tp_series": [
+    0,
+    0,
+    1781,
+    1979,
+    2106,
+    2106
+  ],
+  "fp_series": [
+    0,
+    0,
+    0,
+    8,
+    9,
+    9
+  ],
+  "fn_series": [
+    0,
+    0,
+    6283,
+    5610,
+    4960,
+    4960
+  ]
+}

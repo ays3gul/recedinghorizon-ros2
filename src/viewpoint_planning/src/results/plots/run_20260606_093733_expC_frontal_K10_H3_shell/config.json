@@ -1,0 +1,17 @@
+{
+  "experiment": "C",
+  "num_iters": 20,
+  "num_trials": 1,
+  "base_seed": 42,
+  "rh_params": {
+    "horizon": 3,
+    "num_candidates": 10,
+    "lambda_cost": 2.0,
+    "discount": 0.85,
+    "step_size": 0.065,
+    "use_spherical_bounds": true,
+    "occlusion_bonus": 0.0
+  },
+  "occlusion": "frontal",
+  "timestamp": "2026-06-06T09:37:33.392959"
+}

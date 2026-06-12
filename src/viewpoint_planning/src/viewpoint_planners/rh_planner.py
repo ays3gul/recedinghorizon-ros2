@@ -16,7 +16,7 @@ class RHPlanner:
         start_pose: np.array,
         mesh_coordinates: np.array,
         mesh_tree,
-        grid_size: np.array = np.array([0.3, 0.3, 0.3]),
+        grid_size: np.array = np.array([0.3, 0.6, 0.3]),
         voxel_size: np.array = np.array([0.003]),
         grid_center: np.array = np.array([0.5, -0.4, 1.1]),
         image_size: np.array = np.array([600, 450]),
@@ -39,14 +39,19 @@ class RHPlanner:
         # Improvement parameters
         r_min: float = 0.15,          # min orbit radius around target
         r_max: float = 0.45,          # max orbit radius around target
-        occlusion_bonus: float = 2.0, # weight for occlusion-aware IG bonus
+        occlusion_bonus: float = 2.0, # weight for occlusion-aware IG bonus.
+                                      # DEFAULT 0.0 = OFF: GradientNBV's utility
+                                      # has no such term, so it is disabled for
+                                      # the fair baseline comparison. Set >0
+                                      # (e.g. 2.0) to re-enable as an ablation.
         stagnation_patience: int = 4, # iters without coverage gain → then escape
         rng_seed: int = 42,
         robot_reach_bounds: np.array = None,
-        # When False, the spherical orbital shell is disabled and only the
-        # axis-aligned reach box constrains the camera — i.e. Burusa-style
-        # box-constrained sampling. Use this to ablate the shell's effect.
-        use_spherical_bounds: bool = True,
+        # DEFAULT False = OFF: the spherical orbital shell is an RH-specific
+        # constraint absent from Burusa's GradientNBV. It is disabled by default
+        # so both planners search the SAME box-constrained camera space. Set
+        # True to re-enable the shell as an ablation (reproduces older results).
+        use_spherical_bounds: bool = False,
     ) -> None:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -65,12 +70,18 @@ class RHPlanner:
             )
         else:
             self.robot_reach_bounds = None
-        # Axis-aligned bounding box of the sphere (for clamp fallback)
-        target_np = np.array(target_params)
+        # Axis-aligned camera bounds.
+        # MATCHED EXACTLY to GradientNBVPlanner's camera box so both planners
+        # search the same physical camera workspace (fair comparison). Burusa's
+        # planner uses start_pose +/- [0.2, 0.1, 0.15]; we mirror that here
+        # instead of the old target +/- r_max cube. The shell (if re-enabled via
+        # use_spherical_bounds) still uses r_min/r_max independently.
+        start_np = np.asarray(start_pose[:3], dtype=np.float32)
+        bounds_halfwidths = np.array([0.2, 0.1, 0.15], dtype=np.float32)
         self.camera_bounds = torch.tensor(
             [
-                [target_np[0] - r_max, target_np[1] - r_max, target_np[2] - r_max],
-                [target_np[0] + r_max, target_np[1] + r_max, target_np[2] + r_max],
+                (start_np - bounds_halfwidths).tolist(),
+                (start_np + bounds_halfwidths).tolist(),
             ],
             dtype=torch.float32,
             device=self.device,
@@ -129,6 +140,7 @@ class RHPlanner:
             torch.cuda.manual_seed_all(rng_seed)
 
         self.target_voxels        = np.array(0)
+        self.all_target_voxels    = np.zeros((0, 3))  # full recon for plotting
         self.candidate_history    = []
         self.occluded_mesh_points = None
 
@@ -240,6 +252,7 @@ class RHPlanner:
 
   
     # Occlusion-aware IG
+    @torch.no_grad()
     def compute_gain_on_grid(
         self, voxel_grid_data: torch.Tensor, camera_pos: torch.Tensor
     ) -> float:
@@ -247,6 +260,11 @@ class RHPlanner:
         Transmittance-weighted semantic entropy + occlusion bonus.
         Occlusion bonus: voxels that are occupied & semantically uncertain
         (likely occluded targets) get extra weight.
+
+        Wrapped in torch.no_grad(): this function only returns a scalar via
+        .item() and never back-propagates, so building the autograd graph was
+        pure overhead. Disabling it leaves every numeric result identical while
+        cutting memory and runtime (important on the limited-GPU laptop).
         """
         self.ray_trace_count += 1
         quat       = look_at_rotation(camera_pos, self.target_params)
@@ -254,7 +272,8 @@ class RHPlanner:
             quat[None, :], camera_pos[None, :]
         )
 
-        t_vals = self.voxel_grid.t_vals.clone()
+        # t_vals is read-only here, so the previous .clone() was unnecessary.
+        t_vals = self.voxel_grid.t_vals
         ray_origins, ray_directions, _ = (
             self.voxel_grid.ray_sampler.ray_origins_directions(transforms=transforms)
         )
@@ -293,12 +312,17 @@ class RHPlanner:
     # ------------------------------------------------------------------
     # PredictUpdate — belief forward simulation (no ray_trace_count)
     # ------------------------------------------------------------------
+    @torch.no_grad()
     def predict_update(
         self, voxel_grid_data: torch.Tensor, camera_pos: torch.Tensor
     ) -> torch.Tensor:
         """
         Simulate hypothetical measurement. Does NOT count as a ray-tracing
         call (Burusa metric 3 counts only real gain evaluations).
+
+        Wrapped in torch.no_grad(): the predicted grid is only consumed by
+        compute_gain_on_grid (also no-grad), never differentiated, so the
+        autograd graph was unused overhead. Results are unchanged.
         """
         updated_grid = voxel_grid_data.clone()
 
@@ -373,8 +397,6 @@ class RHPlanner:
         J         = 0.0
         prev_pos  = start_pos.clone()
         M_pred    = self.voxel_grid.voxel_grid.clone()
-        # Track which voxel positions have been "seen" this sequence
-        seen_set  = set()
 
         for k in range(self.horizon):
             xi_k = sequence[k]
@@ -401,17 +423,6 @@ class RHPlanner:
             prev_pos = xi_k
 
         return J
-
-    # ------------------------------------------------------------------
-    # Adaptive horizon
-    # ------------------------------------------------------------------
-    def _adaptive_horizon(self, coverage: float) -> int:
-        if coverage < 40.0:
-            return 2   # fast early exploration
-        elif coverage < 70.0:
-            return 3   # default
-        else:
-            return 5   # deep occlusion handling
 
     # ------------------------------------------------------------------
     # Receding horizon step
@@ -644,6 +655,12 @@ class RHPlanner:
         if len(voxel_points) == 0:
             self.target_voxels = np.zeros((0, 3))
             return 0, 0, 0
+
+        # Keep the full set of reconstructed target-class voxels (before the ROI
+        # clip) for visualisation. F1 below is scored only inside the ROI, but
+        # the reconstruction plot should show everything the camera actually
+        # recovered of the object surface, not just the ROI slice.
+        self.all_target_voxels = voxel_points.copy()
 
         # 3) Clip both voxels and mesh to the ROI cube around the target.
         #    IMPORTANT: this must match the coverage ROI used in voxel_grid.py

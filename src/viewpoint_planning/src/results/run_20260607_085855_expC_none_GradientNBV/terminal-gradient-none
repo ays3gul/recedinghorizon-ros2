@@ -1,0 +1,304 @@
+(grad_nbv) ayse@ayse-Lenovo-Yoga-C740-14IML:~/Desktop/RecedingHorizon/src/viewpoint_planning/src$ OCC=none EXPERIMENT=C NUM_TRIALS=1 python3 test_gradient_node.py
+[INFO] [1780815535.093552, 0.000000]: [ArmControlClient] Initializing arm control test
+[INFO] [1780815535.098981, 125866.139000]: [ArmControlClient] Waiting for the sercives to become available
+[INFO] [1780815535.106077, 125866.148000]: [ArmControlClient] Arm control node has started
+
+Run directory: results/run_20260607_085855_expC_none_GradientNBV
+GradientNBV baseline | 20 viewpoints | Occlusion: none
+
+
+============================================================
+  GradientNBV TRIAL 1/1 | Occlusion: none
+============================================================
+
+[INFO] [1780815535.635886, 125867.540000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5
+  y: -0.050000000000000044
+  z: 1.1
+orientation: 
+  x: 0.0
+  y: 0.0
+  z: -0.7071067811865475
+  w: 0.7071067811865476
+[INFO] [1780815536.595786, 125870.344000]: [ArmControlClient] Arm arrived at pose
+--- GradientNBV Iteration 1/20 ---
+/home/ayse/Desktop/RecedingHorizon/src/common/utils/src/utils/torch_utils.py:26: UserWarning: Using torch.cross without specifying the dim arg is deprecated.
+Please either pass the dim explicitly or simply use torch.linalg.cross.
+The default value of dim will change to agree with that of linalg.cross in a future release. (Triggered internally at ../aten/src/ATen/native/Cross.cpp:62.)
+  vec1 = torch.cross(ref, dir)
+[INFO] [1780815571.075734, 125942.897000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.469855934381485
+  y: -0.019985003396868706
+  z: 1.1296700239181519
+orientation: 
+  x: 0.0
+  y: 0.0534377284348011
+  z: -0.6766915917396545
+  w: 0.7343248128890991
+[INFO] [1780815571.814763, 125944.750000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=52.9776 | loss=2.0304 | F1=0.7656 | recall=0.6217 | precision=0.9964
+--- GradientNBV Iteration 2/20 ---
+[INFO] [1780815620.212150, 126040.927000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.492037832736969
+  y: -0.020258845761418343
+  z: 1.1169229745864868
+orientation: 
+  x: 0.0
+  y: 0.0323944166302681
+  z: -0.699191153049469
+  w: 0.7142004370689392
+[INFO] [1780815620.840092, 126042.664000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=61.1776 | loss=2.6503 | F1=0.7914 | recall=0.6554 | precision=0.9986
+--- GradientNBV Iteration 3/20 ---
+[INFO] [1780815669.592877, 126139.747000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5079088807106018
+  y: -0.031221626326441765
+  z: 1.0989454984664917
+orientation: 
+  x: 0.0
+  y: -0.00012610157136805356
+  z: -0.7150811553001404
+  w: 0.6990413665771484
+[INFO] [1780815670.148213, 126141.151000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=63.4024 | loss=2.7661 | F1=0.7869 | recall=0.6493 | precision=0.9985
+--- GradientNBV Iteration 4/20 ---
+[INFO] [1780815717.592024, 126242.315000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5213433504104614
+  y: -0.048391446471214294
+  z: 1.0822181701660156
+orientation: 
+  x: 0.0
+  y: -0.034132134169340134
+  z: -0.7280017137527466
+  w: 0.6847251653671265
+[INFO] [1780815717.958943, 126243.278000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=64.1128 | loss=2.8422 | F1=0.7846 | recall=0.6460 | precision=0.9987
+--- GradientNBV Iteration 5/20 ---
+[INFO] [1780815767.892710, 126346.430000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5184909105300903
+  y: -0.06816710531711578
+  z: 1.0729342699050903
+orientation: 
+  x: 0.0
+  y: -0.05564214661717415
+  z: -0.7251303195953369
+  w: 0.6863599419593811
+[INFO] [1780815768.201556, 126347.444000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=64.6464 | loss=2.9278 | F1=0.7664 | recall=0.6219 | precision=0.9984
+--- GradientNBV Iteration 6/20 ---
+[INFO] [1780815816.215799, 126448.326000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5069333910942078
+  y: -0.09112215042114258
+  z: 1.0769953727722168
+orientation: 
+  x: 0.0
+  y: -0.048741672188043594
+  z: -0.714352548122406
+  w: 0.6980865597724915
+[INFO] [1780815816.721314, 126449.595000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=64.7944 | loss=3.0079 | F1=0.7464 | recall=0.5960 | precision=0.9984
+--- GradientNBV Iteration 7/20 ---
+[INFO] [1780815869.002717, 126548.601000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4959181845188141
+  y: -0.11537987738847733
+  z: 1.0784852504730225
+orientation: 
+  x: 0.0
+  y: -0.04749426618218422
+  z: -0.7017216086387634
+  w: 0.710866391658783
+[INFO] [1780815869.561604, 126549.843000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=64.9408 | loss=3.0493 | F1=0.7431 | recall=0.5918 | precision=0.9984
+--- GradientNBV Iteration 8/20 ---
+[INFO] [1780815919.129916, 126650.878000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4804450273513794
+  y: -0.14138305187225342
+  z: 1.0707694292068481
+orientation: 
+  x: 0.0
+  y: -0.06998378783464432
+  z: -0.6780543327331543
+  w: 0.731672465801239
+[INFO] [1780815919.498407, 126652.008000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=65.3384 | loss=3.1016 | F1=0.7436 | recall=0.5924 | precision=0.9985
+--- GradientNBV Iteration 9/20 ---
+[INFO] [1780815966.166676, 126750.307000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.46373069286346436
+  y: -0.15000000596046448
+  z: 1.0568631887435913
+orientation: 
+  x: 0.0
+  y: -0.10464198142290115
+  z: -0.6484257578849792
+  w: 0.7540517449378967
+[INFO] [1780815966.576794, 126751.447000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=65.9536 | loss=3.1876 | F1=0.7563 | recall=0.6088 | precision=0.9984
+--- GradientNBV Iteration 10/20 ---
+[INFO] [1780816015.661364, 126855.445000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.443331778049469
+  y: -0.15000000596046448
+  z: 1.0377373695373535
+orientation: 
+  x: 0.0
+  y: -0.14485637843608856
+  z: -0.6111955046653748
+  w: 0.778110921382904
+[INFO] [1780816016.092985, 126856.682000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=66.7528 | loss=3.3612 | F1=0.7646 | recall=0.6194 | precision=0.9989
+--- GradientNBV Iteration 11/20 ---
+[INFO] [1780816064.670149, 126957.969000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4505423307418823
+  y: -0.15000000596046448
+  z: 1.0192985534667969
+orientation: 
+  x: 0.0
+  y: -0.18949218094348907
+  z: -0.6113792657852173
+  w: 0.7683151364326477
+[INFO] [1780816065.047874, 126959.043000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=66.8096 | loss=3.5545 | F1=0.7616 | recall=0.6155 | precision=0.9989
+--- GradientNBV Iteration 12/20 ---
+[INFO] [1780816112.380928, 127062.146000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4433358609676361
+  y: -0.15000000596046448
+  z: 0.997633695602417
+orientation: 
+  x: 0.0
+  y: -0.23267041146755219
+  z: -0.5876573920249939
+  w: 0.7749344110488892
+[INFO] [1780816112.845785, 127063.285000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=67.0040 | loss=3.8248 | F1=0.7620 | recall=0.6159 | precision=0.9990
+--- GradientNBV Iteration 13/20 ---
+[INFO] [1780816164.557625, 127163.108000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.44889435172080994
+  y: -0.15000000596046448
+  z: 0.9910473227500916
+orientation: 
+  x: 0.0
+  y: -0.24869753420352936
+  z: -0.5903007984161377
+  w: 0.7679157257080078
+[INFO] [1780816164.830505, 127163.903000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=67.0248 | loss=4.0507 | F1=0.7609 | recall=0.6144 | precision=0.9990
+--- GradientNBV Iteration 14/20 ---
+[INFO] [1780816214.908128, 127267.304000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4620487689971924
+  y: -0.15000000596046448
+  z: 0.9966442584991455
+orientation: 
+  x: 0.0
+  y: -0.24328748881816864
+  z: -0.6118179559707642
+  w: 0.7526553273200989
+[INFO] [1780816215.228851, 127268.237000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=67.0496 | loss=4.2687 | F1=0.7531 | recall=0.6045 | precision=0.9986
+--- GradientNBV Iteration 15/20 ---
+[INFO] [1780816263.230773, 127369.105000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4797050356864929
+  y: -0.15000000596046448
+  z: 1.0086873769760132
+orientation: 
+  x: 0.0
+  y: -0.22429531812667847
+  z: -0.6445396542549133
+  w: 0.7309310436248779
+[INFO] [1780816263.603726, 127370.057000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=67.0496 | loss=4.4605 | F1=0.7466 | recall=0.5963 | precision=0.9982
+--- GradientNBV Iteration 16/20 ---
+[INFO] [1780816311.158957, 127468.948000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4907703697681427
+  y: -0.15000000596046448
+  z: 1.0225818157196045
+orientation: 
+  x: 0.0
+  y: -0.1948373168706894
+  z: -0.6699367761611938
+  w: 0.7163960337638855
+[INFO] [1780816311.481821, 127469.862000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=67.4000 | loss=4.6070 | F1=0.7276 | recall=0.5754 | precision=0.9890
+--- GradientNBV Iteration 17/20 ---
+[INFO] [1780816360.556893, 127565.126000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5054734945297241
+  y: -0.15000000596046448
+  z: 1.040595531463623
+orientation: 
+  x: 0.0
+  y: -0.15230081975460052
+  z: -0.7018510699272156
+  w: 0.6958516240119934
+[INFO] [1780816360.959098, 127566.158000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=67.5536 | loss=4.6965 | F1=0.7111 | recall=0.5568 | precision=0.9840
+--- GradientNBV Iteration 18/20 ---
+[INFO] [1780816410.407976, 127664.688000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.521572470664978
+  y: -0.15000000596046448
+  z: 1.0595676898956299
+orientation: 
+  x: 0.0
+  y: -0.10210748761892319
+  z: -0.7333707809448242
+  w: 0.6721170544624329
+[INFO] [1780816410.771186, 127665.883000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=67.6656 | loss=4.7461 | F1=0.7066 | recall=0.5532 | precision=0.9775
+--- GradientNBV Iteration 19/20 ---
+[INFO] [1780816460.815555, 127760.663000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5381358861923218
+  y: -0.15000000596046448
+  z: 1.0768096446990967
+orientation: 
+  x: 0.0
+  y: -0.05201245844364166
+  z: -0.7607293128967285
+  w: 0.6469818949699402
+[INFO] [1780816461.263408, 127761.803000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=67.6656 | loss=4.7393 | F1=0.7402 | recall=0.5935 | precision=0.9833
+--- GradientNBV Iteration 20/20 ---
+[INFO] [1780816511.514008, 127863.488000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5464025139808655
+  y: -0.15000000596046448
+  z: 1.089474081993103
+orientation: 
+  x: 0.0
+  y: -0.012317072600126266
+  z: -0.7730791568756104
+  w: 0.6341899633407593
+[INFO] [1780816511.830817, 127864.442000]: [ArmControlClient] Arm arrived at pose
+[GradNBV] coverage=67.6760 | loss=4.6738 | F1=0.7463 | recall=0.6020 | precision=0.9815
+
+==================================================================================================
+  TABLE: GradientNBV  |  Occlusion: none  |  20 iterations
+  (* = final value)
+==================================================================================================
+  # Viewpoints                                      0        4        8       12       16       20
+--------------------------------------------------------------------------------------------------
+  ROI coverage (%) ↑                              0.0     64.1     65.3     67.0     67.4    67.7*
+--------------------------------------------------------------------------------------------------
+  Ray-tracing calls (#) ↓                           0        4        8       12       16      20*
+--------------------------------------------------------------------------------------------------
+  Trajectory distance (m) ↓                     0.000    0.131    0.237    0.331    0.393   0.480*
+--------------------------------------------------------------------------------------------------
+  Recall occluded node (%) ↑                        -        -        -        -        -        -
+--------------------------------------------------------------------------------------------------
+  sigma 3D node pos (m×10⁻²) ↓                      -        -        -        -        -        -
+==================================================================================================
+
+  SUPPORTING METRICS
+--------------------------------------------------------------------------------------------------
+  Recall (full mesh, %)                           60.2
+  Precision (full mesh, %)                        98.2
+  Visibility efficiency (%)                       67.7
+  Coverage AUC                                    63.7
+  Computation time (s)                           873.8
+  Hausdorff distance (m)                      0.087591
+  Chamfer distance (m)                        0.017020
+--------------------------------------------------------------------------------------------------
+
+  Saved -> results/run_20260607_085855_expC_none_GradientNBV/trial_00/metrics_gradientnbv_none.json
+
+Saved: results/run_20260607_085855_expC_none_GradientNBV/trial_00/coverage_gradientnbv_none.png
+Saved: results/run_20260607_085855_expC_none_GradientNBV/trial_00/trajectory_3d_gradientnbv_none.png
+Saved: results/run_20260607_085855_expC_none_GradientNBV/trial_00/reconstruction_gradientnbv_none.png
+
+GradientNBV baseline complete.
+

@@ -195,6 +195,11 @@ class VoxelGrid:
         self.voxel_grid[..., 1:3] = torch.clamp(
             self.voxel_grid[..., 1:3], self.eps, 1.0 - self.eps
         )
+        # Update semantic class label (index 3) for occupied voxels
+        sem_labels = ray_sem[valid_indices, 1]
+        occupied_mask = sem_labels >= 0
+        if occupied_mask.any():
+            self.voxel_grid[gx[occupied_mask], gy[occupied_mask], gz[occupied_mask], 3] = sem_labels[occupied_mask]
         # Track how many ROI voxels are theoretically visible
         # (will be updated via set_max_visible_voxels after first real measurement)
         self.max_visible_roi_voxels = None

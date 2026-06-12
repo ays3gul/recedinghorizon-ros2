@@ -6,7 +6,6 @@ Extended with extract_node_position() to support Burusa-style Kalman-filter
 node tracking (Section IV-A of Burusa et al. ICRA 2024).
 """
 
-import rospy
 import cv2
 import torch
 import numpy as np
@@ -35,12 +34,15 @@ class Perceiver:
         points = depth_output["points"]
         # Return if no data
         if camera_info is None or color_image is None:
-            rospy.logwarn("[Perceiver] Perception paused. No data from camera.")
-            return
+            print("[Perceiver] Perception paused. No data from camera.")
+            return None, None, None
         # Color-based segmentation
         # Note: Only for the toy example. Replace with an object-detection
         # network in practice.
         segmentation_mask = self.color_segmentation(color_image)
+        import numpy as _np
+        _n_detected = int((_np.asarray(segmentation_mask) > 0).sum())
+        print(f'[Perceiver] segmentation pixels detected: {_n_detected}')
         # Get semantics
         semantics = self.assign_semantics(camera_info, segmentation_mask)
         return depth_image, points, semantics
@@ -52,7 +54,7 @@ class Perceiver:
         :return: segmentation mask
         """
         # Convert BGR to HSV
-        hsv_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2HSV)
+        hsv_image = cv2.cvtColor(color_image, cv2.COLOR_RGB2HSV)
         # Define range of red color in HSV
         lower_color = np.array([0, 50, 50])
         upper_color = np.array([10, 255, 255])
@@ -192,7 +194,7 @@ class Perceiver:
         depth_image = depth_output["depth_image"]
         points = depth_output["points"]
         if camera_info is None or color_image is None:
-            rospy.logwarn("[Perceiver] Perception paused. No data from camera.")
+            print("[Perceiver] Perception paused. No data from camera.")
             return None
         segmentation_mask = self.color_segmentation(color_image)
         semantics = self.assign_semantics(camera_info, segmentation_mask)

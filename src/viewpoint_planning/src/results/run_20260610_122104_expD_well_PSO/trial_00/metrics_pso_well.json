@@ -1,0 +1,131 @@
+{
+  "method": "PSO",
+  "occlusion": "well",
+  "params": {
+    "planner": "PSO",
+    "trial": 0,
+    "seed": null
+  },
+  "num_iters": 5,
+  "coverages": [
+    0.0,
+    21.54,
+    21.54,
+    38.74,
+    38.74,
+    38.74
+  ],
+  "f1_scores": [
+    0.0,
+    0.2223,
+    0.2223,
+    0.2936,
+    0.2936,
+    0.2936
+  ],
+  "recalls": [
+    0.0,
+    0.125,
+    0.125,
+    0.172,
+    0.172,
+    0.172
+  ],
+  "precisions": [
+    0.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "distances": [
+    0.0,
+    0.2328,
+    0.3689,
+    0.4578,
+    0.7122,
+    0.8727
+  ],
+  "times": [
+    0.0,
+    10.7,
+    57.1,
+    104.0,
+    151.6,
+    196.9
+  ],
+  "ray_tracing_calls": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "final_coverage": 38.74,
+  "final_f1": 0.2936,
+  "final_distance": 0.8727,
+  "total_time": 196.9,
+  "total_ray_calls": 0,
+  "visibility_efficiency": 38.7,
+  "coverage_auc": 27.98,
+  "hausdorff_distance": 0.155756,
+  "chamfer_distance": 0.040832,
+  "coverage_efficiency": 44.38,
+  "stagnation_count": 3,
+  "first_detection_iter": 1,
+  "views_to_threshold": {
+    "views_to_25pct": 3,
+    "views_to_50pct": null,
+    "views_to_75pct": null
+  },
+  "views_to_f1_threshold": 1,
+  "coverage_at_key_iters": {
+    "0": 0.0,
+    "3": 38.74,
+    "6": 38.74,
+    "9": 38.74,
+    "5": 38.74
+  },
+  "tp_series": [
+    0,
+    161,
+    161,
+    231,
+    231,
+    231
+  ],
+  "fp_series": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "fn_series": [
+    0,
+    15934,
+    15934,
+    15078,
+    15078,
+    15078
+  ],
+  "sigma_series": [
+    0.0,
+    0.01732061617076397,
+    0.01732061617076397,
+    0.02333889529109001,
+    0.02333889529109001,
+    0.02333889529109001
+  ],
+  "occluded_recall_series": [
+    0.0,
+    0.0,
+    0.0,
+    0.002026285424816368,
+    0.021782568316775955,
+    0.021782568316775955
+  ]
+}

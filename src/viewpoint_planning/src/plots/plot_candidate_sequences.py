@@ -14,19 +14,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-
-# Occluder pozisyonları
-OCCLUDERS = {
-    'complex': [
-        ([0.73, -0.25, 0.95], (0.30, 0.03, 0.30)),
-        ([0.50, -0.22, 1.00], (0.03, 0.03, 0.20)),
-        ([0.60, -0.32, 1.30], (0.30, 0.03, 0.30)),
-    ],
-    'easy':   [([0.65, -0.30, 1.10], (0.30, 0.03, 0.30))],
-    'hard':   [([0.60, -0.25, 1.10], (0.30, 0.03, 0.30))],
-    'bottom': [([0.60, -0.25, 1.00], (0.30, 0.03, 0.30))],
-    'none':   [],
-}
+# Single source of truth for occluder geometry, shared with the trajectory
+# plot and kept in sync with viewpoint_planning.py. Values are
+# (center_xyz, half_extent_xyz) — note half-extent, so bar3d uses 2*h below.
+try:
+    from occluder_geometry import OCCLUDERS
+except ImportError:
+    from plots.occluder_geometry import OCCLUDERS
 
 
 def plot_candidate_sequences(
@@ -72,12 +66,12 @@ def plot_candidate_sequences(
     mesh = np.asarray(mesh_coordinates)
     ax.scatter(mesh[:, 0], mesh[:, 1], mesh[:, 2], c='red', s=1, alpha=0.5)
 
-    # 2) Occluders
-    for occ_pos, occ_size in OCCLUDERS.get(occlusion_type, []):
+    # 2) Occluders (OCCLUDERS stores half-extents)
+    for occ_pos, occ_half in OCCLUDERS.get(occlusion_type, []):
         x, y, z = occ_pos
-        w, d, h = occ_size
+        hx, hy, hz = occ_half
         ax.bar3d(
-            x - w/2, y - d/2, z - h/2, w, d, h,
+            x - hx, y - hy, z - hz, 2 * hx, 2 * hy, 2 * hz,
             color='orange', alpha=0.3, edgecolor='darkorange',
         )
 
@@ -193,11 +187,11 @@ def plot_candidate_sequences_grid(
         # Bunny
         ax.scatter(mesh[:, 0], mesh[:, 1], mesh[:, 2], c='red', s=1, alpha=0.4)
 
-        # Occluders
-        for occ_pos, occ_size in OCCLUDERS.get(occlusion_type, []):
+        # Occluders (half-extents)
+        for occ_pos, occ_half in OCCLUDERS.get(occlusion_type, []):
             x, y, z = occ_pos
-            w, d, h = occ_size
-            ax.bar3d(x - w/2, y - d/2, z - h/2, w, d, h,
+            hx, hy, hz = occ_half
+            ax.bar3d(x - hx, y - hy, z - hz, 2 * hx, 2 * hy, 2 * hz,
                      color='orange', alpha=0.3, edgecolor='darkorange')
 
         # Rejected

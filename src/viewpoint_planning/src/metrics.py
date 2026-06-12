@@ -70,10 +70,7 @@ def compute_all_metrics(coverages, recalls, precisions, distances, times,
     # final coverage alone doesn't capture HOW FAST you got there.
     # AUC rewards planners that reach high coverage quickly.
     # Normalized by number of iterations so AUC is in [0, 100].
-    # np.trapz was removed in NumPy 2.0 (renamed to np.trapezoid).
-    # Use whichever is available so the code runs on both 1.x and 2.x.
-    _trapz = getattr(np, "trapezoid", None) or getattr(np, "trapz")
-    coverage_auc = round(float(_trapz(coverages, dx=1) / max(n - 1, 1)), 2)
+    coverage_auc = round(float(np.trapz(coverages, dx=1) / max(n - 1, 1)), 2)
 
     # =========================================================
     # Hausdorff Distance
@@ -207,7 +204,19 @@ def compute_all_metrics(coverages, recalls, precisions, distances, times,
 
 
 def detect_occlusion_type(config_path="viewpoint_planners/viewpoint_planning.py"):
-    """Detect which occlusion scenario is active from the config file."""
+    """Return the active occlusion scenario.
+
+    The scenario is now selected at runtime via the OCC environment variable
+    (see viewpoint_planning.py `config()`), so we read it directly from the
+    environment. This keeps the label in sync with what was actually spawned.
+    The legacy config-file parsing below is kept only as a fallback for old
+    runs that still hard-coded a spawn_*_occlusion() call.
+    """
+    occ = os.environ.get("OCC")
+    if occ:
+        return occ.lower()
+
+    # ---- legacy fallback: parse the config file for a hard-coded spawn call ----
     occlusion_type = "unknown"
     if os.path.exists(config_path):
         with open(config_path) as f:
@@ -215,24 +224,16 @@ def detect_occlusion_type(config_path="viewpoint_planners/viewpoint_planning.py"
                 stripped = line.strip()
                 if stripped.startswith("#"):
                     continue
-                if "spawn_extreme_occlusion" in stripped:
-                    return "extreme"
-                if "spawn_complex_occlusion" in stripped:
-                    return "complex3"
-                if "spawn_easy_occlusion" in stripped:
-                    return "easy"
-                if "spawn_hard_occlusion" in stripped:
-                    return "hard"
+                if "spawn_well_occlusion" in stripped:
+                    return "well"
+                if "spawn_tunnel_occlusion" in stripped:
+                    return "tunnel"
+                if "spawn_half_box_occlusion" in stripped:
+                    return "half_box"
+                if "spawn_frontal_occlusion" in stripped:
+                    return "frontal"
                 if "spawn_no_occlusion" in stripped:
                     return "none"
-                if "spawn_c_shape_occlusion" in stripped:
-                    return "Hard C shaped"
-                #if "occlusion_position" in stripped:
-                   # if "0.65" in stripped: return "easy"
-                   # elif "0.6, -0.25" in stripped: return "hard"
-                   # elif "1.25" in stripped: return "top"
-                   # elif "0.95" in stripped: return "bottom"
-                   # elif "0.35" in stripped: return "right"
     return occlusion_type
 
 
@@ -241,18 +242,13 @@ def save_and_print(results, prefix="results", experiment="D"):
     Print results in Burusa et al. (ICRA 2024) table format.
     Single unified table: rows = metrics, columns = viewpoint indices.
 
-    experiment:
-        "D" -> Table II (node reconstruction): full metric set
-               (coverage, F1, ray-tracing, trajectory, recall-occluded, sigma,
-               TP/FP/FN). Typically 5 viewpoints.
-        "C" -> Table I (occlusion-handling behaviour): only coverage,
-               ray-tracing and trajectory distance. F1/recall/sigma/TP-FP-FN
-               are omitted exactly as in Burusa's Table I. Typically 20 vp.
+    experiment="C" -> Table I  (occlusion-handling): coverage, ray-calls,
+                      trajectory (no F1/recall, which Burusa omits there).
+    experiment="D" -> Table II (node reconstruction): full metrics incl. F1.
     """
     method  = results["method"]
     occ     = results["occlusion"]
     n       = results["num_iters"]
-    is_C    = str(experiment).upper() == "C"
 
     covs      = results["coverages"]
     f1s       = [v * 100 for v in results["f1_scores"]]
@@ -310,57 +306,50 @@ def save_and_print(results, prefix="results", experiment="D"):
         return f"  {label:<{lbl_w}}" + f"{'  -':>{col_w}}" * len(col_indices)
 
     print(f"\n{sep}")
-    table_id = "TABLE I (occlusion-handling)" if is_C else "TABLE II (node reconstruction)"
-    print(f"  {table_id}: {method}  |  Occlusion: {occ}  |  {n} iterations")
+    print(f"  TABLE: {method}  |  Occlusion: {occ}  |  {n} iterations")
     print(f"  (* = final value)")
     print(sep)
     print(_header())
     print(dash)
 
-    # ROI Coverage — present in both Table I and Table II
+    # ROI Coverage
     print(_float_row("ROI coverage (%) ↑", covs, fmt=".1f"))
     print(dash)
 
-    if not is_C:
-        # F1 — Table II only
+    # F1 — only for Experiment D (Table II). Burusa's Table I (occlusion-
+    # handling, experiment C) does not report reconstruction F1.
+    if experiment == "D":
         print(_float_row("F1-score 3D reconstruction (%) ↑", f1s, fmt=".1f"))
         print(dash)
 
-    # Ray-tracing calls — both tables
+    # Ray-tracing calls
     print(_int_row("Ray-tracing calls (#) ↓", ray_calls))
     print(dash)
 
-    # Trajectory distance — both tables
+    # Trajectory distance
     print(_float_row("Trajectory distance (m) ↓", dists, fmt=".3f"))
+    print(dash)
 
-    if not is_C:
-        print(dash)
-        # Recall occluded — Table II only
-        occ_recalls = results.get("occluded_recall_series", None)
-        if occ_recalls is not None:
-            occ_pct = [round(v * 100, 1) for v in occ_recalls]
-            print(_float_row("Recall occluded node (%) ↑", occ_pct, fmt=".1f"))
-        else:
-            print(_dash_row("Recall occluded node (%) ↑"))
-        print(dash)
-
-        # Sigma — Table II only
-        if sigmas is not None:
-            sigmas_cm = [round(s * 100, 2) for s in sigmas]
-            print(_float_row("sigma 3D node pos (m×10⁻²) ↓", sigmas_cm, fmt=".2f"))
-        else:
-            print(_dash_row("sigma 3D node pos (m×10⁻²) ↓"))
-
-        # Explicit TP / FP / FN counts (Table II only, supervisor request)
-        tp_series = results.get("tp_series", None)
-        fp_series = results.get("fp_series", None)
-        fn_series = results.get("fn_series", None)
-        if tp_series is not None:
-            print(dash)
-            print(_int_row("True Positives (#) ↑",  tp_series, bold_last=False))
-            print(_int_row("False Positives (#) ↓", fp_series, bold_last=False))
-            print(_int_row("False Negatives (#) ↓", fn_series, bold_last=False))
-
+    # Recall occluded
+    #print(_dash_row("Recall occluded node (%) ↑"))
+    #print(dash)
+    
+    # Recall occluded
+    occ_recalls = results.get("occluded_recall_series", None)
+    if occ_recalls is not None:
+        occ_pct = [round(v * 100, 1) for v in occ_recalls]
+        print(_float_row("Recall occluded node (%) ↑", occ_pct, fmt=".1f"))
+    else:
+        print(_dash_row("Recall occluded node (%) ↑"))
+    print(dash)
+ 
+    # Sigma
+    if sigmas is not None:
+        sigmas_cm = [round(s * 100, 2) for s in sigmas]
+        print(_float_row("sigma 3D node pos (m×10⁻²) ↓", sigmas_cm, fmt=".2f"))
+    else:
+        print(_dash_row("sigma 3D node pos (m×10⁻²) ↓"))
+ 
     print(sep)
 
 
@@ -368,28 +357,22 @@ def save_and_print(results, prefix="results", experiment="D"):
     # Supporting metrics block
     print(f"\n  SUPPORTING METRICS")
     print(dash)
-    if not is_C:
-        # Reconstruction-quality supports — Table II / Experiment D only.
-        print(f"  {'Recall (full mesh, %)':<{lbl_w}} {results['recalls'][-1]*100:>{col_w}.1f}")
-        print(f"  {'Precision (full mesh, %)':<{lbl_w}} {results['precisions'][-1]*100:>{col_w}.1f}")
-
+    print(f"  {'Recall (full mesh, %)':<{lbl_w}} {results['recalls'][-1]*100:>{col_w}.1f}")
+    print(f"  {'Precision (full mesh, %)':<{lbl_w}} {results['precisions'][-1]*100:>{col_w}.1f}")
+    
     ve = results.get('visibility_efficiency', None)
     if ve is not None:
         print(f"  {'Visibility efficiency (%)':<{lbl_w}} {ve:>{col_w}.1f}")
 
     print(f"  {'Coverage AUC':<{lbl_w}} {results['coverage_auc']:>{col_w}.1f}")
     print(f"  {'Computation time (s)':<{lbl_w}} {results['total_time']:>{col_w}.1f}")
-    if not is_C and results['hausdorff_distance'] is not None:
+    if results['hausdorff_distance'] is not None:
         print(f"  {'Hausdorff distance (m)':<{lbl_w}} {results['hausdorff_distance']:>{col_w}.6f}")
         print(f"  {'Chamfer distance (m)':<{lbl_w}} {results['chamfer_distance']:>{col_w}.6f}")
     print(dash)
 
     # Save JSON
     fname = f"{prefix}_{method.lower().replace('-','_')}_{occ}.json"
-    # Ensure the destination directory exists (prefix may include subfolders).
-    _outdir = os.path.dirname(fname)
-    if _outdir:
-        os.makedirs(_outdir, exist_ok=True)
     with open(fname, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\n  Saved -> {fname}\n")

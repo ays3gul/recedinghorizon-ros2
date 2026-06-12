@@ -1,57 +1,76 @@
 #!/usr/bin/env python3
-
-import rospy
+import time
 import random
-
 from geometry_msgs.msg import Pose, Point, Quaternion
-from abb_control.srv import ArmGoal
+from abb_interfaces.srv import ArmGoal
+import ros2_node
 
 
 def RandomPoseGenerator(minx, maxx, miny, maxy, minz, maxz):
     return Pose(
-        Point(
-            random.uniform(minx, maxx),
-            random.uniform(miny, maxy),
-            random.uniform(minz, maxz),
-        ),
-        Quaternion(0.0, 0.0, 0.0, 1.0),
+        position=Point(x=random.uniform(minx, maxx),
+                       y=random.uniform(miny, maxy),
+                       z=random.uniform(minz, maxz)),
+        orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
     )
 
 
 class ArmControlClient:
     def __init__(self):
-        # Initialize the subscribers/publishers
-        rospy.loginfo("[ArmControlClient] Initializing arm control test")
-
-        # Initialize the services
-        self.armcontrol_service = rospy.ServiceProxy("move_arm_to_pose", ArmGoal)
-
-        # define workspace borders
+        node = ros2_node.get_node()
+        node.get_logger().info("[ArmControlClient] Initializing arm control")
+        self.client = node.create_client(ArmGoal, "move_arm_to_pose")
         self.minx = 0.40
         self.maxx = 0.80
         self.miny = -0.40
         self.maxy = 0.40
         self.minz = 1.00
         self.maxz = 1.40
-
-        # Check / wait for communication to motor drives being operational
-        rospy.loginfo("[ArmControlClient] Waiting for the sercives to become available")
-        rospy.wait_for_service("move_arm_to_pose")
-        rospy.loginfo("[ArmControlClient] Arm control node has started")
-
-        test_pose = RandomPoseGenerator(
-            self.minx, self.maxx, self.miny, self.maxy, self.minz, self.maxz
+        node.get_logger().info(
+            "[ArmControlClient] Waiting for move_arm_to_pose service..."
         )
+        if not self.client.wait_for_service(timeout_sec=10.0):
+            node.get_logger().warn(
+                "[ArmControlClient] move_arm_to_pose service not available after 10s. "
+                "Is the arm controller running?"
+            )
+        else:
+            node.get_logger().info("[ArmControlClient] Arm control ready")
 
     def move_arm_to_pose(self, pose):
+        node = ros2_node.get_node()
+        # Ensure the spin thread is alive before sending — it may have died during
+        # the long planning window if the rclpy context was inadvertently shut down.
+        import rclpy
+        spin_thread = ros2_node._spin_thread
+        if spin_thread is None or not spin_thread.is_alive():
+            print(f"[ArmControlClient] Spin thread dead (rclpy.ok={rclpy.ok()}), restarting...")
+            if rclpy.ok() and ros2_node._executor is not None:
+                import threading
+                ros2_node._spin_thread = threading.Thread(
+                    target=ros2_node._executor.spin, daemon=True
+                )
+                ros2_node._spin_thread.start()
+                print("[ArmControlClient] Spin thread restarted")
         try:
-            rospy.loginfo(f"[ArmControlClient] Requesting move to pose: {pose}")
-            result = self.armcontrol_service(pose)
-            if result:
-                 rospy.loginfo("[ArmControlClient] Arm arrived at pose")
+            node.get_logger().info(
+                f"[ArmControlClient] Requesting move to pose: {pose}"
+            )
+            req = ArmGoal.Request()
+            req.goal_pose = pose
+            future = self.client.call_async(req)
+            deadline = time.monotonic() + 60.0
+            while not future.done():
+                if time.monotonic() > deadline:
+                    print("[ArmControlClient] Service call timed out after 60s")
+                    return False
+                time.sleep(0.01)
+            result = future.result()
+            if result and result.success:
+                node.get_logger().info("[ArmControlClient] Arm arrived at pose")
             else:
-                 rospy.logerr("[ArmControlClient] Arm motion failed")
-            return result
-        except rospy.ServiceException as e:
-            print("[ArmControlClient] Service call failed: %s" % e)
+                node.get_logger().error("[ArmControlClient] Arm motion failed")
+            return result.success if result else False
+        except Exception as e:
+            print(f"[ArmControlClient] Service call failed: {e}")
             return False

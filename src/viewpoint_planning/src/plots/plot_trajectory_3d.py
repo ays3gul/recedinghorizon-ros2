@@ -9,22 +9,12 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-
-# Occluder definitions: (center_xyz, half_extents_xyz)
-OCCLUDERS = {
-    'none':    [],
-    'easy':    [([0.65, -0.30, 1.10], (0.030, 0.030, 0.030))],
-    'hard':    [([0.60, -0.25, 1.10], (0.030, 0.030, 0.030))],
-    'extreme': [
-        ([0.60, -0.30, 1.10], (0.030, 0.030, 0.030)),
-        ([0.60, -0.30, 1.20], (0.030, 0.030, 0.030)),
-    ],
-    'complex3': [
-        ([0.73, -0.25, 0.95], (0.030, 0.030, 0.030)),
-        ([0.50, -0.22, 1.00], (0.015, 0.015, 0.100)),
-        ([0.60, -0.32, 1.30], (0.030, 0.030, 0.030)),
-    ],
-}
+# Single source of truth for occluder geometry, kept in sync with the spawn
+# positions in viewpoint_planning.py. Values are (center_xyz, half_extent_xyz).
+try:
+    from occluder_geometry import OCCLUDERS
+except ImportError:
+    from plots.occluder_geometry import OCCLUDERS
 
 
 def _draw_box(ax, center, half_ext, color='goldenrod', alpha=0.45):

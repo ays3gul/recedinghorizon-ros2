@@ -1,0 +1,16 @@
+{
+  "experiment": "D",
+  "num_iters": 5,
+  "num_trials": 1,
+  "base_seed": 42,
+  "rh_params": {
+    "horizon": 3,
+    "num_candidates": 10,
+    "lambda_cost": 2.0,
+    "discount": 0.85,
+    "step_size": 0.12,
+    "use_spherical_bounds": true
+  },
+  "occlusion": "hard",
+  "timestamp": "2026-06-03T23:55:08.103919"
+}

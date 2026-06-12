@@ -1,0 +1,137 @@
+{
+  "method": "RH-NBV",
+  "occlusion": "none",
+  "params": {
+    "horizon": 3,
+    "num_candidates": 10,
+    "lambda_cost": 2.0,
+    "discount": 0.85,
+    "step_size": 0.065,
+    "use_spherical_bounds": false,
+    "occlusion_bonus": 0.0,
+    "trial": 0,
+    "seed": 42
+  },
+  "num_iters": 5,
+  "coverages": [
+    0.0,
+    69.64,
+    72.05,
+    74.31,
+    75.91,
+    76.41
+  ],
+  "f1_scores": [
+    0.0,
+    0.7639,
+    0.8129,
+    0.8051,
+    0.8061,
+    0.7962
+  ],
+  "recalls": [
+    0.0,
+    0.6274,
+    0.6927,
+    0.6896,
+    0.6905,
+    0.677
+  ],
+  "precisions": [
+    0.0,
+    0.9762,
+    0.9835,
+    0.9672,
+    0.9683,
+    0.9664
+  ],
+  "distances": [
+    0.0,
+    0.2081,
+    0.258,
+    0.3387,
+    0.3755,
+    0.6625
+  ],
+  "times": [
+    0.5,
+    642.9,
+    1241.4,
+    1853.6,
+    2451.4,
+    3047.4
+  ],
+  "ray_tracing_calls": [
+    0,
+    30,
+    60,
+    90,
+    120,
+    150
+  ],
+  "final_coverage": 76.41,
+  "final_f1": 0.7962,
+  "final_distance": 0.6625,
+  "total_time": 3047.4,
+  "total_ray_calls": 150,
+  "visibility_efficiency": 76.4,
+  "coverage_auc": 66.02,
+  "hausdorff_distance": 0.090727,
+  "chamfer_distance": 0.015849,
+  "coverage_efficiency": 115.33,
+  "stagnation_count": 0,
+  "first_detection_iter": 1,
+  "views_to_threshold": {
+    "views_to_25pct": 1,
+    "views_to_50pct": 1,
+    "views_to_75pct": 4
+  },
+  "views_to_f1_threshold": 1,
+  "coverage_at_key_iters": {
+    "0": 0.0,
+    "3": 74.31,
+    "6": 76.41,
+    "9": 76.41,
+    "5": 76.41
+  },
+  "sigma_series": [
+    0.0,
+    0.05079836770892143,
+    0.047394320368766785,
+    0.053274787962436676,
+    0.05256388708949089,
+    0.05264239385724068
+  ],
+  "occluded_recall_series": [
+    0.0,
+    0.0,
+    0.08067232230801004,
+    0.09531979792202841,
+    0.10116607886124615,
+    0.11787881676357513
+  ],
+  "tp_series": [
+    0,
+    2092,
+    2984,
+    2592,
+    3148,
+    2245
+  ],
+  "fp_series": [
+    0,
+    51,
+    50,
+    88,
+    103,
+    78
+  ],
+  "fn_series": [
+    0,
+    6785,
+    5597,
+    5653,
+    5637,
+    5882
+  ]
+}

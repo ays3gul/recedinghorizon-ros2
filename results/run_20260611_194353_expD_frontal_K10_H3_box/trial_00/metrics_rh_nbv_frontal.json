@@ -1,0 +1,137 @@
+{
+  "method": "RH-NBV",
+  "occlusion": "frontal",
+  "params": {
+    "horizon": 3,
+    "num_candidates": 10,
+    "lambda_cost": 2.0,
+    "discount": 0.85,
+    "step_size": 0.065,
+    "use_spherical_bounds": false,
+    "occlusion_bonus": 0.0,
+    "trial": 0,
+    "seed": 42
+  },
+  "num_iters": 5,
+  "coverages": [
+    0.0,
+    40.45,
+    48.36,
+    48.36,
+    48.36,
+    48.36
+  ],
+  "f1_scores": [
+    0.0,
+    0.8159,
+    0.8349,
+    0.8349,
+    0.8349,
+    0.8349
+  ],
+  "recalls": [
+    0.0,
+    0.6895,
+    0.717,
+    0.717,
+    0.717,
+    0.717
+  ],
+  "precisions": [
+    0.0,
+    0.9991,
+    0.9991,
+    0.9991,
+    0.9991,
+    0.9991
+  ],
+  "distances": [
+    0.0,
+    0.2081,
+    0.258,
+    0.3387,
+    0.3716,
+    0.6159
+  ],
+  "times": [
+    0.2,
+    167.2,
+    334.5,
+    513.8,
+    689.0,
+    866.4
+  ],
+  "ray_tracing_calls": [
+    0,
+    30,
+    60,
+    90,
+    120,
+    150
+  ],
+  "final_coverage": 48.36,
+  "final_f1": 0.8349,
+  "final_distance": 0.6159,
+  "total_time": 866.4,
+  "total_ray_calls": 150,
+  "visibility_efficiency": 48.4,
+  "coverage_auc": 41.94,
+  "hausdorff_distance": 0.089666,
+  "chamfer_distance": 0.015579,
+  "coverage_efficiency": 78.51,
+  "stagnation_count": 3,
+  "first_detection_iter": 1,
+  "views_to_threshold": {
+    "views_to_25pct": 1,
+    "views_to_50pct": null,
+    "views_to_75pct": null
+  },
+  "views_to_f1_threshold": 1,
+  "coverage_at_key_iters": {
+    "0": 0.0,
+    "3": 48.36,
+    "6": 48.36,
+    "9": 48.36,
+    "5": 48.36
+  },
+  "sigma_series": [
+    0.0,
+    0.051516059786081314,
+    0.05172741040587425,
+    0.05172741040587425,
+    0.05172741040587425,
+    0.05172741040587425
+  ],
+  "occluded_recall_series": [
+    0.0,
+    0.0,
+    0.010469122714020673,
+    0.010469122714020673,
+    0.010469122714020673,
+    0.010469122714020673
+  ],
+  "tp_series": [
+    0,
+    2184,
+    2137,
+    2137,
+    2137,
+    2137
+  ],
+  "fp_series": [
+    0,
+    2,
+    2,
+    2,
+    2,
+    2
+  ],
+  "fn_series": [
+    0,
+    5654,
+    5153,
+    5153,
+    5153,
+    5153
+  ]
+}

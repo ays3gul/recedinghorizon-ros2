@@ -1,0 +1,344 @@
+(grad_nbv) ayse@ayse-Lenovo-Yoga-C740-14IML:~/Desktop/RecedingHorizon/src/viewpoint_planning/src$ OCC=none EXPERIMENT=C NUM_TRIALS=1 python3 test_rh_node.py
+
+Run directory: results/run_20260606_203047_expC_none_K10_H3_shell
+Burusa-aligned: Experiment C / Table I (occlusion-handling)
+  20 viewpoints, 1 trial(s)
+
+
+============================================================
+  TRIAL 1/1  |  seed=42
+  K=10, H=3, gamma=0.85, lambda=2.0 | Occlusion: none
+============================================================
+
+[INFO] [1780770647.194712, 113.111000]: [ArmControlClient] Initializing arm control test
+[INFO] [1780770647.197087, 113.118000]: [ArmControlClient] Waiting for the sercives to become available
+[INFO] [1780770647.208662, 113.162000]: [ArmControlClient] Arm control node has started
+[Occlusion] scenario = none
+[INFO] [1780770647.375480, 113.556000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5
+  y: -0.050000000000000044
+  z: 1.1
+orientation: 
+  x: 0.0
+  y: 0.0
+  z: -0.7071067811865475
+  w: 0.7071067811865476
+[INFO] [1780770648.071058, 115.165000]: [ArmControlClient] Arm arrived at pose
+[RHPlanner] K=10, H=3, r=[0.15,0.45], occlusion_bonus=0.0, stagnation_patience=4
+[RH] K=10, H=3 -> evals/iter=30
+--- RH Iteration 1/20 ---
+/home/ayse/Desktop/RecedingHorizon/src/common/utils/src/utils/torch_utils.py:26: UserWarning: Using torch.cross without specifying the dim arg is deprecated.
+Please either pass the dim explicitly or simply use torch.linalg.cross.
+The default value of dim will change to agree with that of linalg.cross in a future release. (Triggered internally at ../aten/src/ATen/native/Cross.cpp:62.)
+  vec1 = torch.cross(ref, dir)
+[INFO] [1780771314.052987, 1193.099000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.49524396657943726
+  y: -0.050000131130218506
+  z: 1.1237393617630005
+orientation: 
+  x: 0.0
+  y: 0.04752533510327339
+  z: -0.7006877064704895
+  w: 0.711883544921875
+[INFO] [1780771314.634616, 1194.682000]: [ArmControlClient] Arm arrived at pose
+[RHPlanner] Occluded after view 0: 31437/35947 (87.5%)
+[RH] coverage=48.5712 | loss=4.1260 | F1=0.7505 | recall=0.6026 | precision=0.9946 | occ_recall=0.0000 | evals=30
+    Occluded recall: 0.0% (0/31437 mesh points recovered)
+--- RH Iteration 2/20 ---
+[INFO] [1780772025.285409, 2305.173000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.6499999761581421
+  y: -0.13694605231285095
+  z: 1.1714916229248047
+orientation: 
+  x: 0.0
+  y: 0.2257664054632187
+  z: -0.8307094573974609
+  w: 0.5088725686073303
+[INFO] [1780772026.142054, 2307.221000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=61.7888 | loss=5.1523 | F1=0.7486 | recall=0.6045 | precision=0.9829 | occ_recall=0.0253 | evals=30
+    Occluded recall: 2.5% (795/31437 mesh points recovered)
+--- RH Iteration 3/20 ---
+[INFO] [1780772753.965451, 3372.880000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.6485263705253601
+  y: -0.1499764621257782
+  z: 1.2225289344787598
+orientation: 
+  x: 0.0
+  y: 0.3773621618747711
+  z: -0.7700176239013672
+  w: 0.5144615173339844
+[INFO] [1780772754.631335, 3374.743000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=64.2552 | loss=3.6781 | F1=0.8093 | recall=0.6904 | precision=0.9776 | occ_recall=0.0427 | evals=30
+    Occluded recall: 4.3% (1343/31437 mesh points recovered)
+--- RH Iteration 4/20 ---
+[INFO] [1780773437.079631, 4450.491000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.6113477945327759
+  y: -0.15000000596046448
+  z: 1.25
+orientation: 
+  x: 0.0
+  y: 0.42376217246055603
+  z: -0.7062703967094421
+  w: 0.5671048164367676
+[INFO] [1780773438.972917, 4455.704000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=66.1808 | loss=3.8238 | F1=0.8084 | recall=0.6871 | precision=0.9818 | occ_recall=0.0555 | evals=30
+    Occluded recall: 5.5% (1744/31437 mesh points recovered)
+--- RH Iteration 5/20 ---
+[INFO] [1780774082.040253, 5567.819000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.504508376121521
+  y: -0.15000000596046448
+  z: 1.25
+orientation: 
+  x: 0.0
+  y: 0.36660516262054443
+  z: -0.6110086441040039
+  w: 0.7016189694404602
+[INFO] [1780774082.754309, 5569.753000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=70.1232 | loss=3.9045 | F1=0.8385 | recall=0.7320 | precision=0.9813 | occ_recall=0.0649 | evals=30
+    Occluded recall: 6.5% (2039/31437 mesh points recovered)
+--- RH Iteration 6/20 ---
+[INFO] [1780774750.366339, 6667.884000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.48599377274513245
+  y: -0.1462203562259674
+  z: 1.244256615638733
+orientation: 
+  x: 0.0
+  y: 0.3409576714038849
+  z: -0.5998209118843079
+  w: 0.7238526344299316
+[INFO] [1780774750.739426, 6668.928000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=70.8184 | loss=5.3882 | F1=0.8433 | recall=0.7396 | precision=0.9810 | occ_recall=0.0698 | evals=30
+    Occluded recall: 7.0% (2193/31437 mesh points recovered)
+--- RH Iteration 7/20 ---
+[INFO] [1780775405.691431, 7787.511000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4992787539958954
+  y: -0.15000000596046448
+  z: 1.25
+orientation: 
+  x: 0.0
+  y: 0.3633531332015991
+  z: -0.6055886149406433
+  w: 0.7079808712005615
+[INFO] [1780775406.082567, 7788.484000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=71.1176 | loss=4.2549 | F1=0.8273 | recall=0.7135 | precision=0.9843 | occ_recall=0.0656 | evals=30
+    Occluded recall: 6.6% (2061/31437 mesh points recovered)
+--- RH Iteration 8/20 ---
+[INFO] [1780776053.571612, 8906.785000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.46489715576171875
+  y: -0.1465582251548767
+  z: 1.2440978288650513
+orientation: 
+  x: 0.0
+  y: 0.32794082164764404
+  z: -0.5767881274223328
+  w: 0.7481779456138611
+[INFO] [1780776054.000906, 8908.043000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=71.7368 | loss=6.1452 | F1=0.8427 | recall=0.7381 | precision=0.9820 | occ_recall=0.0668 | evals=30
+    Occluded recall: 6.7% (2101/31437 mesh points recovered)
+--- RH Iteration 9/20 ---
+[INFO] [1780776696.713252, 10021.630000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.43835097551345825
+  y: -0.017553359270095825
+  z: 1.0571471452713013
+orientation: 
+  x: 0.0
+  y: -0.07224290817975998
+  z: -0.6447421312332153
+  w: 0.7609787583351135
+[INFO] [1780776698.013157, 10024.887000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=73.7776 | loss=5.9757 | F1=0.8431 | recall=0.7356 | precision=0.9873 | occ_recall=0.0992 | evals=30
+    Occluded recall: 9.9% (3120/31437 mesh points recovered)
+--- RH Iteration 10/20 ---
+[INFO] [1780777384.380512, 11115.446000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.6499999761581421
+  y: -0.15000000596046448
+  z: 0.9700000286102295
+orientation: 
+  x: 0.0
+  y: -0.3955139219760895
+  z: -0.7606037855148315
+  w: 0.5148307681083679
+[INFO] [1780777386.871362, 11121.763000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=74.4736 | loss=6.5303 | F1=0.8435 | recall=0.7360 | precision=0.9876 | occ_recall=0.1177 | evals=30
+    Occluded recall: 11.8% (3699/31437 mesh points recovered)
+--- RH Iteration 11/20 ---
+[INFO] [1780778011.224358, 12259.675000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.628993570804596
+  y: -0.14202925562858582
+  z: 0.9700000286102295
+orientation: 
+  x: 0.0
+  y: -0.3775532841682434
+  z: -0.7492131590843201
+  w: 0.5441811680793762
+[INFO] [1780778011.531062, 12260.529000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=74.8920 | loss=6.3798 | F1=0.8249 | recall=0.7131 | precision=0.9782 | occ_recall=0.1263 | evals=30
+    Occluded recall: 12.6% (3968/31437 mesh points recovered)
+--- RH Iteration 12/20 ---
+[INFO] [1780778634.211434, 13403.281000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.6027877926826477
+  y: -0.127365380525589
+  z: 0.973095715045929
+orientation: 
+  x: 0.0
+  y: -0.3432774841785431
+  z: -0.7374794483184814
+  w: 0.581622302532196
+[INFO] [1780778634.582475, 13404.345000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=75.0560 | loss=6.5699 | F1=0.8277 | recall=0.7161 | precision=0.9804 | occ_recall=0.1241 | evals=30
+    Occluded recall: 12.4% (3901/31437 mesh points recovered)
+--- RH Iteration 13/20 ---
+[INFO] [1780779273.990422, 14537.446000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4017767310142517
+  y: -0.15000000596046448
+  z: 0.9700000286102295
+orientation: 
+  x: 0.0
+  y: -0.2671951949596405
+  z: -0.5138369202613831
+  w: 0.8152167797088623
+[INFO] [1780779274.812088, 14539.823000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=75.4680 | loss=6.4614 | F1=0.8348 | recall=0.7232 | precision=0.9871 | occ_recall=0.1235 | evals=30
+    Occluded recall: 12.4% (3883/31437 mesh points recovered)
+--- RH Iteration 14/20 ---
+[INFO] [1780779884.372724, 15691.411000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.4019114375114441
+  y: -0.15000000596046448
+  z: 0.9700000286102295
+orientation: 
+  x: 0.0
+  y: -0.267275333404541
+  z: -0.5139910578727722
+  w: 0.8150933384895325
+[INFO] [1780779884.570763, 15691.934000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=75.5312 | loss=6.4268 | F1=0.8279 | recall=0.7133 | precision=0.9866 | occ_recall=0.1236 | evals=30
+    Occluded recall: 12.4% (3886/31437 mesh points recovered)
+--- RH Iteration 15/20 ---
+[RHPlanner] Stagnation detected (4 iters) — forcing escape to new orbit position
+[INFO] [1780780493.232554, 16822.320000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.30000001192092896
+  y: -0.15000000596046448
+  z: 1.25
+orientation: 
+  x: 0.0
+  y: 0.23975570499897003
+  z: -0.39959290623664856
+  w: 0.8847839832305908
+[INFO] [1780780494.333374, 16825.422000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=78.4512 | loss=7.1855 | F1=0.8218 | recall=0.7123 | precision=0.9712 | occ_recall=0.1317 | evals=30
+    Occluded recall: 13.2% (4139/31437 mesh points recovered)
+--- RH Iteration 16/20 ---
+[INFO] [1780781128.138906, 17939.783000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.30000001192092896
+  y: -0.15000000596046448
+  z: 1.25
+orientation: 
+  x: 0.0
+  y: 0.23975570499897003
+  z: -0.39959290623664856
+  w: 0.8847839832305908
+[INFO] [1780781128.332709, 17940.303000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=78.6016 | loss=6.0026 | F1=0.7997 | recall=0.6827 | precision=0.9652 | occ_recall=0.1385 | evals=30
+    Occluded recall: 13.8% (4354/31437 mesh points recovered)
+--- RH Iteration 17/20 ---
+[INFO] [1780781755.528275, 19047.764000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.316720187664032
+  y: -0.14685949683189392
+  z: 1.25
+orientation: 
+  x: 0.0
+  y: 0.24746477603912354
+  z: -0.417622447013855
+  w: 0.8742726445198059
+[INFO] [1780781755.826545, 19048.606000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=78.6136 | loss=8.6539 | F1=0.8514 | recall=0.7641 | precision=0.9612 | occ_recall=0.1436 | evals=30
+    Occluded recall: 14.4% (4514/31437 mesh points recovered)
+--- RH Iteration 18/20 ---
+[INFO] [1780782376.595310, 20144.807000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.30923423171043396
+  y: -0.1401357650756836
+  z: 1.2295056581497192
+orientation: 
+  x: 0.0
+  y: 0.21178340911865234
+  z: -0.4249616861343384
+  w: 0.880088210105896
+[INFO] [1780782376.947187, 20145.824000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=78.8328 | loss=6.7705 | F1=0.8629 | recall=0.7843 | precision=0.9590 | occ_recall=0.1632 | evals=30
+    Occluded recall: 16.3% (5129/31437 mesh points recovered)
+--- RH Iteration 19/20 ---
+[INFO] [1780783010.024826, 21247.678000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.30000001192092896
+  y: -0.15000000596046448
+  z: 1.2427388429641724
+orientation: 
+  x: 0.0
+  y: 0.2297574132680893
+  z: -0.40240877866744995
+  w: 0.8861594796180725
+[INFO] [1780783010.376858, 21248.686000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=79.1832 | loss=6.9991 | F1=0.8015 | recall=0.6873 | precision=0.9613 | occ_recall=0.1679 | evals=30
+    Occluded recall: 16.8% (5278/31437 mesh points recovered)
+--- RH Iteration 20/20 ---
+[RHPlanner] Stagnation detected (4 iters) — forcing escape to new orbit position
+[INFO] [1780783668.008182, 22368.039000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.30000001192092896
+  y: -0.14586293697357178
+  z: 0.9700000286102295
+orientation: 
+  x: 0.0
+  y: -0.21022763848304749
+  z: -0.4109741449356079
+  w: 0.8870763778686523
+[INFO] [1780783669.018097, 22370.887000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=79.3408 | loss=8.9630 | F1=0.8185 | recall=0.7086 | precision=0.9687 | occ_recall=0.1724 | evals=30
+    Occluded recall: 17.2% (5419/31437 mesh points recovered)
+
+==================================================================================================
+  TABLE: RH-NBV  |  Occlusion: none  |  20 iterations
+  (* = final value)
+==================================================================================================
+  # Viewpoints                                      0        4        8       12       16       20
+--------------------------------------------------------------------------------------------------
+  ROI coverage (%) ↑                              0.0     66.2     71.7     75.1     78.6    79.3*
+--------------------------------------------------------------------------------------------------
+  Ray-tracing calls (#) ↓                           0      120      240      360      480     600*
+--------------------------------------------------------------------------------------------------
+  Trajectory distance (m) ↓                     0.000    0.307    0.484    1.029    1.530   1.861*
+--------------------------------------------------------------------------------------------------
+  Recall occluded node (%) ↑                      0.0      5.5      6.7     12.4     13.8    17.2*
+--------------------------------------------------------------------------------------------------
+  sigma 3D node pos (m×10⁻²) ↓                   0.00     4.78     4.68     5.03     5.47    5.37*
+==================================================================================================
+
+  SUPPORTING METRICS
+--------------------------------------------------------------------------------------------------
+  Recall (full mesh, %)                           70.9
+  Precision (full mesh, %)                        96.9
+  Visibility efficiency (%)                       79.3
+  Coverage AUC                                    70.4
+  Computation time (s)                         12885.5
+  Hausdorff distance (m)                      0.086319
+  Chamfer distance (m)                        0.013874
+--------------------------------------------------------------------------------------------------
+
+  Saved -> results/run_20260606_203047_expC_none_K10_H3_shell/trial_00/metrics_rh_nbv_none.json
+
+Saved: results/run_20260606_203047_expC_none_K10_H3_shell/trial_00/coverage_rh_none.png
+Saved: results/run_20260606_203047_expC_none_K10_H3_shell/trial_00/trajectory_3d_rh_none.png
+Saved: results/run_20260606_203047_expC_none_K10_H3_shell/trial_00/candidates_iter2_none.png
+Saved: results/run_20260606_203047_expC_none_K10_H3_shell/trial_00/candidates_grid_none.png
+Saved: results/run_20260606_203047_expC_none_K10_H3_shell/trial_00/reconstruction_rh_none.png
+
+############################################################
+  SUMMARY over 1 trial(s)  |  Occlusion: none
+############################################################
+  Final coverage : 79.34 +/- 0.00 %
+  Final F1       : 81.85 +/- 0.00 %
+  Trajectory dist: 1.861 +/- 0.000 m
+  Coverage AUC   : 70.36
+  Saved -> results/run_20260606_203047_expC_none_K10_H3_shell/summary.json
+
+
+All trials complete.
+(grad_nbv) ayse@ayse-Leno

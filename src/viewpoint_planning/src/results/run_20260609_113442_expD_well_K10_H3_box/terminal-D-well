@@ -1,0 +1,156 @@
+(grad_nbv) ayse@ayse-Lenovo-Yoga-C740-14IML:~/Desktop/RecedingHorizon/src/viewpoint_planning/src$ OCC=well EXPERIMENT=D NUM_TRIALS=1 python3 test_rh_node.py
+
+Run directory: results/run_20260609_113442_expD_well_K10_H3_box
+Burusa-aligned: Experiment D / Table II (node reconstruction)
+  5 viewpoints, 1 trial(s)
+
+
+============================================================
+  TRIAL 1/1  |  seed=42
+  K=10, H=3, gamma=0.85, lambda=2.0 | Occlusion: well
+============================================================
+
+[INFO] [1780997682.027561, 0.000000]: [ArmControlClient] Initializing arm control test
+[INFO] [1780997682.030018, 0.000000]: [ArmControlClient] Waiting for the sercives to become available
+[INFO] [1780997682.046330, 10703.299000]: [ArmControlClient] Arm control node has started
+[Occlusion] scenario = well
+[INFO] [1780997682.585561, 10704.143000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5
+  y: -0.050000000000000044
+  z: 1.1
+orientation: 
+  x: 0.0
+  y: 0.0
+  z: -0.7071067811865475
+  w: 0.7071067811865476
+[INFO] [1780997684.148310, 10707.524000]: [ArmControlClient] Arm arrived at pose
+[RHPlanner] K=10, H=3, r=[0.15,0.45], occlusion_bonus=0.0, stagnation_patience=4
+[RH] K=10, H=3 -> evals/iter=30
+--- RH Iteration 1/5 ---
+/home/ayse/Desktop/RecedingHorizon/src/common/utils/src/utils/torch_utils.py:26: UserWarning: Using torch.cross without specifying the dim arg is deprecated.
+Please either pass the dim explicitly or simply use torch.linalg.cross.
+The default value of dim will change to agree with that of linalg.cross in a future release. (Triggered internally at ../aten/src/ATen/native/Cross.cpp:62.)
+  vec1 = torch.cross(ref, dir)
+[INFO] [1780998383.498931, 11702.404000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.3102479577064514
+  y: -0.02677493542432785
+  z: 1.1823228597640991
+orientation: 
+  x: 0.0
+  y: 0.1134977787733078
+  z: -0.51456218957901
+  w: 0.8499082922935486
+[INFO] [1780998385.016936, 11706.029000]: [ArmControlClient] Arm arrived at pose
+[RHPlanner] Occluded after view 0: 35854/35947 (99.7%)
+[RH] coverage=7.2936 | loss=3.9824 | F1=0.0990 | recall=0.0521 | precision=1.0000 | occ_recall=0.0000 | evals=30
+    Occluded recall: 0.0% (0/35854 mesh points recovered)
+--- RH Iteration 2/5 ---
+[INFO] [1780999039.236747, 12763.475000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.31400007009506226
+  y: -0.030387189239263535
+  z: 1.2073479890823364
+orientation: 
+  x: 0.0
+  y: 0.148226797580719
+  z: -0.5103638768196106
+  w: 0.8470876216888428
+[INFO] [1780999039.643762, 12764.503000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=16.5000 | loss=8.4528 | F1=0.1864 | recall=0.1028 | precision=1.0000 | occ_recall=0.0136 | evals=30
+    Occluded recall: 1.4% (489/35854 mesh points recovered)
+--- RH Iteration 3/5 ---
+[INFO] [1780999688.710425, 13821.678000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.370503306388855
+  y: -0.11542212218046188
+  z: 1.2321770191192627
+orientation: 
+  x: 0.0
+  y: 0.23425763845443726
+  z: -0.504358172416687
+  w: 0.8311114311218262
+[INFO] [1780999689.213288, 13822.964000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=28.0720 | loss=5.2845 | F1=0.2581 | recall=0.1482 | precision=1.0000 | occ_recall=0.0249 | evals=30
+    Occluded recall: 2.5% (893/35854 mesh points recovered)
+--- RH Iteration 4/5 ---
+[INFO] [1781000351.250349, 14905.331000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.36011168360710144
+  y: -0.14592652022838593
+  z: 1.25
+orientation: 
+  x: 0.0
+  y: 0.27178558707237244
+  z: -0.46035683155059814
+  w: 0.8451059460639954
+[INFO] [1781000351.746791, 14906.525000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=39.4216 | loss=4.9303 | F1=0.3219 | recall=0.1918 | precision=1.0000 | occ_recall=0.0296 | evals=30
+    Occluded recall: 3.0% (1063/35854 mesh points recovered)
+--- RH Iteration 5/5 ---
+[INFO] [1781000997.340998, 16000.208000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5721704959869385
+  y: -0.14314216375350952
+  z: 1.0565754175186157
+orientation: 
+  x: 0.0
+  y: -0.13267672061920166
+  z: -0.7847867608070374
+  w: 0.6053979992866516
+[INFO] [1781000999.630189, 16005.364000]: [ArmControlClient] Arm arrived at pose
+  [F1 DIAG] voxel->mesh nearest dist (mm): min=0.2 q25=2.1 med=4.0 q75=7.2 max=14.3
+  [F1 DIAG] threshold=12.0mm | voxels_in_ROI=404 mesh_in_ROI=18211 | frac voxels within thr=96.8%
+  [F1 DIAG] mean signed offset (mm): x=+0.4 y=-1.0 z=-2.5
+  [F1 DIAG] voxel centroid: (0.544, -0.407, 1.135) | roi-mesh centroid: (0.512, -0.390, 1.082)
+  [F1 DIAG] voxel  bbox: x[0.512,0.575] y[-0.469,-0.361] z[1.112,1.160]
+  [F1 DIAG] mesh   bbox: x[0.427,0.575] y[-0.474,-0.329] z[1.025,1.175]
+[RH] coverage=39.4216 | loss=6.6190 | F1=0.3219 | recall=0.1918 | precision=1.0000 | occ_recall=0.0296 | evals=30
+    Occluded recall: 3.0% (1063/35854 mesh points recovered)
+
+==================================================================================================
+  TABLE: RH-NBV  |  Occlusion: well  |  5 iterations
+  (* = final value)
+==================================================================================================
+  # Viewpoints                                      0        1        2        3        4        5
+--------------------------------------------------------------------------------------------------
+  ROI coverage (%) ↑                              0.0      7.3     16.5     28.1     39.4    39.4*
+--------------------------------------------------------------------------------------------------
+  F1-score 3D reconstruction (%) ↑                0.0      9.9     18.6     25.8     32.2    32.2*
+--------------------------------------------------------------------------------------------------
+  Ray-tracing calls (#) ↓                           0       30       60       90      120     150*
+--------------------------------------------------------------------------------------------------
+  Trajectory distance (m) ↓                     0.000    0.208    0.234    0.339    0.376   0.663*
+--------------------------------------------------------------------------------------------------
+  Recall occluded node (%) ↑                      0.0      0.0      1.4      2.5      3.0     3.0*
+--------------------------------------------------------------------------------------------------
+  sigma 3D node pos (m×10⁻²) ↓                   0.00     0.63     1.47     2.38     2.78    2.78*
+==================================================================================================
+
+  SUPPORTING METRICS
+--------------------------------------------------------------------------------------------------
+  Recall (full mesh, %)                           19.2
+  Precision (full mesh, %)                       100.0
+  Visibility efficiency (%)                       39.4
+  Coverage AUC                                    22.2
+  Computation time (s)                          3313.1
+  Hausdorff distance (m)                      0.151342
+  Chamfer distance (m)                        0.038658
+--------------------------------------------------------------------------------------------------
+
+  Saved -> results/run_20260609_113442_expD_well_K10_H3_box/trial_00/metrics_rh_nbv_well.json
+
+Saved: results/run_20260609_113442_expD_well_K10_H3_box/trial_00/coverage_rh_well.png
+Saved: results/run_20260609_113442_expD_well_K10_H3_box/trial_00/trajectory_3d_rh_well.png
+Saved: results/run_20260609_113442_expD_well_K10_H3_box/trial_00/candidates_iter2_well.png
+Saved: results/run_20260609_113442_expD_well_K10_H3_box/trial_00/candidates_grid_well.png
+[ReconPlot] Removed 11 non-target/out-of-bounds voxels (712 target voxels remain)
+Saved: results/run_20260609_113442_expD_well_K10_H3_box/trial_00/reconstruction_rh_well.png
+
+############################################################
+  SUMMARY over 1 trial(s)  |  Occlusion: well
+############################################################
+  Final coverage : 39.42 +/- 0.00 %
+  Final F1       : 32.19 +/- 0.00 %
+  Trajectory dist: 0.663 +/- 0.000 m
+  Coverage AUC   : 22.20
+  Saved -> results/run_20260609_113442_expD_well_K10_H3_box/summary.json
+
+
+All trials complete.
+

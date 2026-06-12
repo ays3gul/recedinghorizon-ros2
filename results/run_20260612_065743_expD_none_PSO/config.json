@@ -1,0 +1,14 @@
+{
+  "experiment": "D",
+  "planner": "PSO",
+  "num_iters": 5,
+  "num_trials": 1,
+  "base_seed": 42,
+  "grid_size": [
+    0.3,
+    0.6,
+    0.3
+  ],
+  "occlusion": "none",
+  "timestamp": "2026-06-12T06:57:43.932007"
+}

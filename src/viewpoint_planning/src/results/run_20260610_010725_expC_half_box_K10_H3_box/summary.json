@@ -1,0 +1,41 @@
+{
+  "occlusion": "half_box",
+  "num_trials": 1,
+  "num_iters": 20,
+  "rh_params": {
+    "horizon": 3,
+    "num_candidates": 10,
+    "lambda_cost": 2.0,
+    "discount": 0.85,
+    "step_size": 0.065,
+    "use_spherical_bounds": false,
+    "occlusion_bonus": 0.0
+  },
+  "per_trial": [
+    {
+      "trial": 0,
+      "final_coverage": 77.49,
+      "final_f1": 0.8323,
+      "final_distance": 2.4856,
+      "total_ray_calls": 600,
+      "coverage_auc": 71.84,
+      "tp_final": 3016,
+      "fp_final": 75,
+      "fn_final": 4997
+    }
+  ],
+  "mean": {
+    "final_coverage": 77.49,
+    "final_f1": 0.8323,
+    "final_distance": 2.4856,
+    "total_ray_calls": 600.0,
+    "coverage_auc": 71.84
+  },
+  "std": {
+    "final_coverage": 0.0,
+    "final_f1": 0.0,
+    "final_distance": 0.0,
+    "total_ray_calls": 0.0,
+    "coverage_auc": 0.0
+  }
+}

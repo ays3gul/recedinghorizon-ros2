@@ -1,18 +1,10 @@
 #!/usr/bin/env python3
 """
-test_gradient_node.py — Burusa GradientNBV baseline driver.
-
-Runs Burusa et al.'s gradient-based NBV planner under EXACTLY the same
-conditions as test_rh_node.py (same VoxelGrid, same bunny mesh, same F1 metric,
-same occlusion scenarios, same output layout) so RH-NBV and GradientNBV are
-directly comparable.
-
-This also serves as a diagnostic: if F1 is 0 here too, the issue is in the
-shared reconstruction/metric pipeline, not in RH-NBV specifically.
+test_gradient_node.py — ROS 2 Jazzy / Burusa GradientNBV baseline driver.
 
 Usage:
-    python3 test_gradient_node.py                 # default 5 viewpoints (Exp D)
-    EXPERIMENT=C python3 test_gradient_node.py    # 20 viewpoints (Exp C)
+    OCC=well ./run_ros2_gz.sh SCRIPT=test_gradient_node.py
+    OCC=frontal EXPERIMENT=C ./run_ros2_gz.sh SCRIPT=test_gradient_node.py
 """
 import os
 import json
@@ -25,17 +17,16 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 
-import rospy
 from scipy.spatial import KDTree
+
+import ros2_node  # ROS 2 singleton (replaces rospy.init_node)
 
 from abb_control.arm_control_client import ArmControlClient
 from perception.perceiver import Perceiver
 from viewpoint_planners.viewpoint_sampler import ViewpointSampler
 from utils.py_utils import numpy_to_pose
 from utils.sdf_spawner import SDFSpawner
-# gradient_nbv_planner.py may sit next to this script (src/) or inside the
-# viewpoint_planners/ package — make sure the script's own directory is on the
-# import path, then try both locations.
+
 import sys as _sys
 _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
@@ -45,13 +36,28 @@ except ModuleNotFoundError:
 
 from metrics import compute_all_metrics, detect_occlusion_type, save_and_print
 
-# Same plotting helpers RH-NBV uses, so GradientNBV produces directly
-# comparable figures (coverage curve, 3D trajectory, reconstruction vs GT).
-# Candidate-sequence plots are RH-specific (GradientNBV has no K candidates),
-# so they are intentionally omitted.
+try:
+    from fair_comparison_config import (
+        GRID_SIZE as FC_GRID_SIZE,
+        get_target_position as fc_get_target_position,
+        jitter_start_pose as fc_jitter_start_pose,
+        seed_for_trial as fc_seed_for_trial,
+    )
+except ModuleNotFoundError:
+    from viewpoint_planners.fair_comparison_config import (
+        GRID_SIZE as FC_GRID_SIZE,
+        get_target_position as fc_get_target_position,
+        jitter_start_pose as fc_jitter_start_pose,
+        seed_for_trial as fc_seed_for_trial,
+    )
+
 from plots.plot_coverage import plot_coverage_progression
 from plots.plot_trajectory_3d import plot_3d_trajectory
-from plots.plot_reconstruction import plot_reconstruction_comparison
+from plots.plot_reconstruction import (
+    plot_reconstruction_comparison,
+    plot_reconstruction_evolution_grid,
+    plot_reconstruction_single_iter,
+)
 
 EXPERIMENT = os.environ.get("EXPERIMENT", "D").upper()
 _default_iters = 20 if EXPERIMENT == "C" else 5
@@ -59,20 +65,14 @@ NUM_ITERS  = int(os.environ.get("NUM_ITERS", _default_iters))
 NUM_TRIALS = int(os.environ.get("NUM_TRIALS", 1))
 BASE_SEED  = int(os.environ.get("BASE_SEED", 42))
 
-# Target node on the bunny body, camera-facing and observable. MUST match
-# viewpoint_planning.py exactly for a fair RH-vs-GradientNBV comparison.
-# (0.5,-0.4,1.1) yields non-zero coverage; the densest-region point was on the
-# occluded side and gave coverage 0. Overridable via TARGET_POS env.
-TARGET_POSITION = np.array([0.5, -0.4, 1.1])
-_tp_env = os.environ.get("TARGET_POS")
-if _tp_env:
-    TARGET_POSITION = np.array([float(v) for v in _tp_env.split(",")])
+TARGET_POSITION = fc_get_target_position()
 
 
 def get_mesh_coordinates():
     """Identical mesh transform to viewpoint_planning.py (fair GT)."""
-    file_path = "/home/ayse/gradientnbv/src/simulation_environment/meshes/bunny.dae"
-    tree = ET.parse(file_path); root = tree.getroot()
+    file_path = "/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes/bunny.dae"
+    tree = ET.parse(file_path)
+    root = tree.getroot()
     ns = {"ns": "http://www.collada.org/2005/11/COLLADASchema"}
     arr = root.find(".//ns:float_array[@id='bun_zipper-mesh-positions-array']", ns)
     raw = list(map(float, arr.text.split()))
@@ -85,21 +85,23 @@ def get_mesh_coordinates():
     return coords, KDTree(coords)
 
 
-# Occlusion scenarios (identical to viewpoint_planning.py)
 def spawn_occlusion(sdf, occ):
     if occ == "none":
         pass
-    elif occ == "easy":
-        sdf.spawn_box(np.array([0.65, -0.3, 1.1]), 1)
-    elif occ == "hard":
-        sdf.spawn_box(np.array([0.6, -0.25, 1.1]), 1)
-    elif occ == "extreme":
-        sdf.spawn_box(np.array([0.6, -0.3, 1.1]), 1)
-        sdf.spawn_box(np.array([0.6, -0.3, 1.2]), 2)
-    elif occ in ("complex", "complex3"):
-        sdf.spawn_box(np.array([0.73, -0.25, 0.95]), 1)
-        sdf.spawn_bar(np.array([0.5, -0.22, 1.0]), 2)
-        sdf.spawn_box(np.array([0.6, -0.32, 1.3]), 3)
+    elif occ == "frontal":
+        sdf.spawn_sized_box(np.array([0.5, -0.25, 1.1]), 1, "medium")
+    elif occ == "half_box":
+        sdf.spawn_named_model(np.array([0.40, -0.40, 1.10]), 1, "panel_side")
+        sdf.spawn_named_model(np.array([0.64, -0.40, 1.10]), 2, "panel_side")
+        sdf.spawn_named_model(np.array([0.50, -0.51, 1.10]), 3, "panel_back")
+    elif occ == "tunnel":
+        sdf.spawn_named_model(np.array([0.43, -0.25, 1.10]), 1, "panel_tunnel")
+        sdf.spawn_named_model(np.array([0.57, -0.25, 1.10]), 2, "panel_tunnel")
+    elif occ == "well":
+        sdf.spawn_named_model(np.array([0.40, -0.40, 1.08]), 1, "panel_side_low")
+        sdf.spawn_named_model(np.array([0.64, -0.40, 1.08]), 2, "panel_side_low")
+        sdf.spawn_named_model(np.array([0.52, -0.28, 1.08]), 3, "panel_front_low")
+        sdf.spawn_named_model(np.array([0.52, -0.52, 1.08]), 4, "panel_front_low")
 
 
 def make_run_dir(occ):
@@ -117,15 +119,16 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
     print(f"\n{'='*60}\n  GradientNBV TRIAL {trial_idx+1}/{NUM_TRIALS} | Occlusion: {occ}\n{'='*60}\n")
 
     start_pose = sampler.predefine_start_pose(TARGET_POSITION)
+    start_pose = fc_jitter_start_pose(start_pose, trial_idx)
     arm.move_arm_to_pose(numpy_to_pose(start_pose))
 
     cam_info = perceiver.get_camera_info()
     image_size = np.array([cam_info.width, cam_info.height])
-    intrinsics = np.array(cam_info.K).reshape(3, 3)
+    intrinsics = np.array(cam_info.k).reshape(3, 3)  # ROS 2: lowercase k
 
     planner = GradientNBVPlanner(
         start_pose=start_pose,
-        grid_size=np.array([0.3, 0.6, 0.3]),
+        grid_size=np.array(FC_GRID_SIZE, dtype=float),
         grid_center=TARGET_POSITION,
         image_size=image_size,
         intrinsics=intrinsics,
@@ -137,6 +140,8 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
     coverages = [0.0]; recalls = [0.0]; precisions = [0.0]
     distances = [0.0]; times = [0.0]; ray_calls = [0]
     tp = [0]; fp = [0]; fn = [0]
+    sigmas = [0.0]; occ_recalls = [0.0]
+    recon_snapshots = []
     trail = [start_pose[:3].copy()]
 
     for i in range(NUM_ITERS):
@@ -144,39 +149,66 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
         t0 = time.time()
         viewpoint, loss, _ = planner.next_best_view(target_pos=TARGET_POSITION)
         ok = arm.move_arm_to_pose(numpy_to_pose(viewpoint))
-        rospy.sleep(1.0)
+        time.sleep(1.0)  # ROS 2: time.sleep instead of rospy.sleep
         if ok:
             depth, _, sem = perceiver.run()
-            cov = planner.update_voxel_grid(depth, sem, viewpoint)
-            cov = float(cov) if cov is not None else coverages[-1]
+            if depth is not None and sem is not None:
+                cov = planner.update_voxel_grid(depth, sem, viewpoint)
+                cov = float(cov) if cov is not None else coverages[-1]
+            else:
+                cov = coverages[-1]
             d = math.sqrt(sum((viewpoint[k]-trail[-1][k])**2 for k in range(3)))
             trail.append(viewpoint[:3].copy())
             distances.append(distances[-1] + d)
+            if planner.occluded_mesh_points is None:
+                planner.set_occluded_mesh_points()
         else:
             cov = coverages[-1]
             distances.append(distances[-1])
         coverages.append(cov)
         times.append(times[-1] + (time.time() - t0))
+
         diag = (EXPERIMENT == "D" and i == NUM_ITERS - 1)
-        f1, rec, prec = planner.calculate_F1(diagnose=diag)
+        occ_positions = None
+        if occ == "tunnel":
+            occ_positions = [
+                (np.array([0.43, -0.25, 1.10]), np.array([0.012, 0.052, 0.102])),
+                (np.array([0.57, -0.25, 1.10]), np.array([0.012, 0.052, 0.102])),
+            ]
+        f1, rec, prec = planner.calculate_F1(
+            occluder_positions=occ_positions, diagnose=diag)
         recalls.append(rec); precisions.append(prec)
         ray_calls.append(planner.ray_trace_count)
         tp.append(planner.last_tp); fp.append(planner.last_fp); fn.append(planner.last_fn)
+        sigmas.append(planner.compute_sigma())
+        occ_recalls.append(planner.compute_occluded_recall())
+
+        snap = (planner.all_target_voxels
+                if getattr(planner, "all_target_voxels", None) is not None
+                and len(planner.all_target_voxels) > 0
+                else planner.target_voxels)
+        recon_snapshots.append(
+            snap.copy() if isinstance(snap, np.ndarray) and snap.ndim == 2
+            else np.zeros((0, 3)))
+
         print(f"[GradNBV] coverage={cov:.4f} | loss={float(loss):.4f} | "
-              f"F1={f1:.4f} | recall={rec:.4f} | precision={prec:.4f}")
+              f"F1={f1:.4f} | recall={rec:.4f} | precision={prec:.4f} | "
+              f"occ_recall={occ_recalls[-1]:.4f}")
 
     results = compute_all_metrics(
         coverages=coverages, recalls=recalls, precisions=precisions,
         distances=distances, times=times, ray_calls=ray_calls,
         method_name="GradientNBV", occlusion_type=occ,
-        params={"planner": "GradientNBV", "lr": 0.03, "trial": trial_idx},
+        params={"planner": "GradientNBV", "lr": 0.03, "trial": trial_idx,
+                "seed": fc_seed_for_trial(trial_idx)},
         target_voxels=planner.target_voxels, mesh_coordinates=mesh_coords,
     )
     results["tp_series"] = tp; results["fp_series"] = fp; results["fn_series"] = fn
+    results["sigma_series"] = sigmas
+    results["occluded_recall_series"] = occ_recalls
     save_and_print(results, prefix=os.path.join(trial_dir, "metrics"),
                    experiment=EXPERIMENT)
 
-    # --- Plots (same helpers as RH-NBV, labelled GradientNBV) ---
     def _try(fn, label):
         try:
             fn()
@@ -199,17 +231,42 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
     ), "trajectory")
 
     _try(lambda: plot_reconstruction_comparison(
-        target_voxels=planner.target_voxels,
+        target_voxels=(planner.all_target_voxels
+                       if getattr(planner, "all_target_voxels", None) is not None
+                       and len(planner.all_target_voxels) > 0
+                       else planner.target_voxels),
         mesh_coordinates=mesh_coords,
         save_path=os.path.join(trial_dir, f"reconstruction_gradientnbv_{occ}.png"),
         method_label="GradientNBV",
     ), "reconstruction")
 
+    if recon_snapshots:
+        _try(lambda: plot_reconstruction_evolution_grid(
+            voxel_snapshots=recon_snapshots,
+            mesh_coordinates=mesh_coords,
+            save_path=os.path.join(trial_dir,
+                                   f"reconstruction_evolution_gradientnbv_{occ}.png"),
+            method_label="GradientNBV",
+        ), "reconstruction_evolution")
+
+        iter_dir = os.path.join(trial_dir, "reconstruction_per_iter")
+        os.makedirs(iter_dir, exist_ok=True)
+        for i, snap in enumerate(recon_snapshots):
+            _try(lambda snap=snap, i=i: plot_reconstruction_single_iter(
+                target_voxels=snap,
+                mesh_coordinates=mesh_coords,
+                iteration=i + 1,
+                save_path=os.path.join(iter_dir,
+                                       f"reconstruction_gradientnbv_{occ}_view{i+1:02d}.png"),
+                method_label="GradientNBV",
+            ), f"reconstruction_view{i+1}")
+
     return results
 
 
 if __name__ == "__main__":
-    rospy.init_node("gradient_test")
+    ros2_node.init("gradient_test")
+
     arm = ArmControlClient()
     perceiver = Perceiver()
     sampler = ViewpointSampler()
@@ -220,9 +277,13 @@ if __name__ == "__main__":
 
     mesh_coords, mesh_tree = get_mesh_coordinates()
     run_dir = make_run_dir(occ)
+
     with open(os.path.join(run_dir, "config.json"), "w") as f:
         json.dump({"experiment": EXPERIMENT, "planner": "GradientNBV",
-                   "num_iters": NUM_ITERS, "occlusion": occ,
+                   "num_iters": NUM_ITERS, "num_trials": NUM_TRIALS,
+                   "base_seed": BASE_SEED,
+                   "grid_size": [float(v) for v in FC_GRID_SIZE],
+                   "occlusion": occ,
                    "timestamp": datetime.datetime.now().isoformat()}, f, indent=2)
 
     print(f"\nRun directory: {run_dir}")
@@ -232,3 +293,4 @@ if __name__ == "__main__":
                                     arm, perceiver, sampler)
                    for t in range(NUM_TRIALS)]
     print("\nGradientNBV baseline complete.")
+    ros2_node.shutdown()

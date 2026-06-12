@@ -1,10 +1,11 @@
 <launch>
   <arg name="paused" default="false"/>
   <arg name="model" default="bunny" doc="The model to be loaded in the simulation"/>
-
   <!-- start simulated world -->
+  <!-- world files are resolved from THIS workspace's simulation_environment
+       package (no more hard-coded path to the old workspace). -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="/home/ayse/catkin_ws/src/PSO-for-perception-of-occluded-target-nodes/simulation_environment/worlds/$(arg model).world"/>
+    <arg name="world_name" value="$(find simulation_environment)/worlds/$(arg model).world"/>
     <arg name="gui" value="true"/>
     <arg name="paused" value="$(arg paused)"/>
   </include>

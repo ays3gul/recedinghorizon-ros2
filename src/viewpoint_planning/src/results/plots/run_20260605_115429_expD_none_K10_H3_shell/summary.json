@@ -1,0 +1,84 @@
+{
+  "occlusion": "none",
+  "num_trials": 5,
+  "num_iters": 5,
+  "rh_params": {
+    "horizon": 3,
+    "num_candidates": 10,
+    "lambda_cost": 2.0,
+    "discount": 0.85,
+    "step_size": 0.12,
+    "use_spherical_bounds": true
+  },
+  "per_trial": [
+    {
+      "trial": 0,
+      "final_coverage": 73.01,
+      "final_f1": 0.8521,
+      "final_distance": 0.3427,
+      "total_ray_calls": 150,
+      "coverage_auc": 59.97,
+      "tp_final": 3045,
+      "fp_final": 63,
+      "fn_final": 4483
+    },
+    {
+      "trial": 1,
+      "final_coverage": 70.88,
+      "final_f1": 0.8558,
+      "final_distance": 0.342,
+      "total_ray_calls": 150,
+      "coverage_auc": 57.2,
+      "tp_final": 2899,
+      "fp_final": 16,
+      "fn_final": 4534
+    },
+    {
+      "trial": 2,
+      "final_coverage": 72.09,
+      "final_f1": 0.8599,
+      "final_distance": 0.3557,
+      "total_ray_calls": 150,
+      "coverage_auc": 59.84,
+      "tp_final": 3005,
+      "fp_final": 11,
+      "fn_final": 4437
+    },
+    {
+      "trial": 3,
+      "final_coverage": 72.6,
+      "final_f1": 0.8524,
+      "final_distance": 0.3214,
+      "total_ray_calls": 150,
+      "coverage_auc": 60.32,
+      "tp_final": 2891,
+      "fp_final": 58,
+      "fn_final": 4481
+    },
+    {
+      "trial": 4,
+      "final_coverage": 71.51,
+      "final_f1": 0.802,
+      "final_distance": 0.3269,
+      "total_ray_calls": 150,
+      "coverage_auc": 57.57,
+      "tp_final": 2686,
+      "fp_final": 107,
+      "fn_final": 5685
+    }
+  ],
+  "mean": {
+    "final_coverage": 72.018,
+    "final_f1": 0.8444,
+    "final_distance": 0.3377,
+    "total_ray_calls": 150.0,
+    "coverage_auc": 58.98
+  },
+  "std": {
+    "final_coverage": 0.7591,
+    "final_f1": 0.0214,
+    "final_distance": 0.0122,
+    "total_ray_calls": 0.0,
+    "coverage_auc": 1.317
+  }
+}

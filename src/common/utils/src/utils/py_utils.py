@@ -1,6 +1,4 @@
-import rospy
 import numpy as np
-import tf2_ros
 
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseArray, PoseStamped
 from scipy.spatial.transform import Rotation as scipy_r
@@ -35,8 +33,9 @@ def pose_to_numpy(view):
 
 def numpy_to_pose(view):
     return Pose(
-        Point(view[0], view[1], view[2]),
-        Quaternion(view[4], view[5], view[6], view[3]),
+        position=Point(x=float(view[0]), y=float(view[1]), z=float(view[2])),
+        orientation=Quaternion(x=float(view[4]), y=float(view[5]),
+                               z=float(view[6]), w=float(view[3])),
     )
 
 

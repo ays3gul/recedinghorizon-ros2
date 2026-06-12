@@ -1,0 +1,143 @@
+(grad_nbv) ayse@ayse-Lenovo-Yoga-C740-14IML:~/Desktop/RecedingHorizon/src/viewpoint_planning/src$ OCC=none EXPERIMENT=D NUM_TRIALS=5 python3 test_rh_node.py
+
+Run directory: results/run_20260609_172442_expD_none_K10_H3_box
+Burusa-aligned: Experiment D / Table II (node reconstruction)
+  5 viewpoints, 5 trial(s)
+
+
+============================================================
+  TRIAL 1/5  |  seed=42
+  K=10, H=3, gamma=0.85, lambda=2.0 | Occlusion: none
+============================================================
+
+[INFO] [1781018682.599739, 0.000000]: [ArmControlClient] Initializing arm control test
+[INFO] [1781018682.606941, 58192.908000]: [ArmControlClient] Waiting for the sercives to become available
+[INFO] [1781018682.614495, 58192.928000]: [ArmControlClient] Arm control node has started
+[Occlusion] scenario = none
+[INFO] [1781018683.007079, 58193.841000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5
+  y: -0.050000000000000044
+  z: 1.1
+orientation: 
+  x: 0.0
+  y: 0.0
+  z: -0.7071067811865475
+  w: 0.7071067811865476
+[INFO] [1781018683.466232, 58195.037000]: [ArmControlClient] Arm arrived at pose
+[RHPlanner] K=10, H=3, r=[0.15,0.45], occlusion_bonus=0.0, stagnation_patience=4
+[RH] K=10, H=3 -> evals/iter=30
+--- RH Iteration 1/5 ---
+/home/ayse/Desktop/RecedingHorizon/src/common/utils/src/utils/torch_utils.py:26: UserWarning: Using torch.cross without specifying the dim arg is deprecated.
+Please either pass the dim explicitly or simply use torch.linalg.cross.
+The default value of dim will change to agree with that of linalg.cross in a future release. (Triggered internally at ../aten/src/ATen/native/Cross.cpp:62.)
+  vec1 = torch.cross(ref, dir)
+[INFO] [1781019313.603192, 59283.397000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.3102479577064514
+  y: -0.02677493542432785
+  z: 1.1823228597640991
+orientation: 
+  x: 0.0
+  y: 0.1134977787733078
+  z: -0.51456218957901
+  w: 0.8499082922935486
+[INFO] [1781019314.752726, 59286.692000]: [ArmControlClient] Arm arrived at pose
+[RHPlanner] Occluded after view 0: 31473/35947 (87.6%)
+[RH] coverage=69.6368 | loss=3.9824 | F1=0.7639 | recall=0.6274 | precision=0.9762 | occ_recall=0.0000 | evals=30
+    Occluded recall: 0.0% (0/31473 mesh points recovered)
+--- RH Iteration 2/5 ---
+[INFO] [1781019923.821154, 60418.379000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.3448277711868286
+  y: -0.06231275200843811
+  z: 1.1771588325500488
+orientation: 
+  x: 0.0
+  y: 0.12110544741153717
+  z: -0.5300207138061523
+  w: 0.8392922282218933
+[INFO] [1781019924.242646, 60419.361000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=72.0472 | loss=5.2127 | F1=0.8129 | recall=0.6927 | precision=0.9835 | occ_recall=0.0807 | evals=30
+    Occluded recall: 8.1% (2539/31473 mesh points recovered)
+--- RH Iteration 3/5 ---
+[INFO] [1781020545.287998, 61578.487000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.370503306388855
+  y: -0.11542212218046188
+  z: 1.2321770191192627
+orientation: 
+  x: 0.0
+  y: 0.23425763845443726
+  z: -0.504358172416687
+  w: 0.8311114311218262
+[INFO] [1781020545.853822, 61579.966000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=74.3072 | loss=3.7903 | F1=0.8051 | recall=0.6896 | precision=0.9672 | occ_recall=0.0953 | evals=30
+    Occluded recall: 9.5% (3000/31473 mesh points recovered)
+--- RH Iteration 4/5 ---
+[INFO] [1781021152.840597, 62735.826000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.36011168360710144
+  y: -0.14592652022838593
+  z: 1.25
+orientation: 
+  x: 0.0
+  y: 0.27178558707237244
+  z: -0.46035683155059814
+  w: 0.8451059460639954
+[INFO] [1781021153.330543, 62737.115000]: [ArmControlClient] Arm arrived at pose
+[RH] coverage=75.9112 | loss=3.7957 | F1=0.8061 | recall=0.6905 | precision=0.9683 | occ_recall=0.1012 | evals=30
+    Occluded recall: 10.1% (3184/31473 mesh points recovered)
+--- RH Iteration 5/5 ---
+[INFO] [1781021756.668282, 63905.668000]: [ArmControlClient] Requesting move to pose: position: 
+  x: 0.5721704959869385
+  y: -0.14314216375350952
+  z: 1.0565754175186157
+orientation: 
+  x: 0.0
+  y: -0.13267672061920166
+  z: -0.7847867608070374
+  w: 0.6053979992866516
+[INFO] [1781021758.583458, 63910.975000]: [ArmControlClient] Arm arrived at pose
+  [F1 DIAG] voxel->mesh nearest dist (mm): min=0.2 q25=3.1 med=6.6 q75=11.1 max=18.7
+  [F1 DIAG] threshold=12.0mm | voxels_in_ROI=2323 mesh_in_ROI=18211 | frac voxels within thr=79.6%
+  [F1 DIAG] mean signed offset (mm): x=+1.1 y=-2.7 z=-3.6
+  [F1 DIAG] voxel centroid: (0.516, -0.370, 1.076) | roi-mesh centroid: (0.512, -0.390, 1.082)
+  [F1 DIAG] voxel  bbox: x[0.434,0.575] y[-0.469,-0.331] z[1.025,1.163]
+  [F1 DIAG] mesh   bbox: x[0.427,0.575] y[-0.474,-0.329] z[1.025,1.175]
+[RH] coverage=76.4072 | loss=4.9160 | F1=0.7962 | recall=0.6770 | precision=0.9664 | occ_recall=0.1179 | evals=30
+    Occluded recall: 11.8% (3710/31473 mesh points recovered)
+
+==================================================================================================
+  TABLE: RH-NBV  |  Occlusion: none  |  5 iterations
+  (* = final value)
+==================================================================================================
+  # Viewpoints                                      0        1        2        3        4        5
+--------------------------------------------------------------------------------------------------
+  ROI coverage (%) ↑                              0.0     69.6     72.0     74.3     75.9    76.4*
+--------------------------------------------------------------------------------------------------
+  F1-score 3D reconstruction (%) ↑                0.0     76.4     81.3     80.5     80.6    79.6*
+--------------------------------------------------------------------------------------------------
+  Ray-tracing calls (#) ↓                           0       30       60       90      120     150*
+--------------------------------------------------------------------------------------------------
+  Trajectory distance (m) ↓                     0.000    0.208    0.258    0.339    0.376   0.662*
+--------------------------------------------------------------------------------------------------
+  Recall occluded node (%) ↑                      0.0      0.0      8.1      9.5     10.1    11.8*
+--------------------------------------------------------------------------------------------------
+  sigma 3D node pos (m×10⁻²) ↓                   0.00     5.08     4.74     5.33     5.26    5.26*
+==================================================================================================
+
+  SUPPORTING METRICS
+--------------------------------------------------------------------------------------------------
+  Recall (full mesh, %)                           67.7
+  Precision (full mesh, %)                        96.6
+  Visibility efficiency (%)                       76.4
+  Coverage AUC                                    66.0
+  Computation time (s)                          3047.4
+  Hausdorff distance (m)                      0.090727
+  Chamfer distance (m)                        0.015849
+--------------------------------------------------------------------------------------------------
+
+  Saved -> results/run_20260609_172442_expD_none_K10_H3_box/trial_00/metrics_rh_nbv_none.json
+
+Saved: results/run_20260609_172442_expD_none_K10_H3_box/trial_00/coverage_rh_none.png
+Saved: results/run_20260609_172442_expD_none_K10_H3_box/trial_00/trajectory_3d_rh_none.png
+Saved: results/run_20260609_172442_expD_none_K10_H3_box/trial_00/candidates_iter2_none.png
+Saved: results/run_20260609_172442_expD_none_K10_H3_box/trial_00/candidates_grid_none.png
+Saved: results/run_20260609_172442_expD_none_K10_H3_box/trial_00/reconstruction_rh_none.png
+

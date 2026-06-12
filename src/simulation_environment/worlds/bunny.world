@@ -56,7 +56,7 @@
         <collision name='collision'>
           <geometry>
             <mesh>
-              <uri>model://bunny.dae</uri>
+              <uri>/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes/bunny.dae</uri>
               <scale>1.2 1.2 1.2</scale>
             </mesh>
           </geometry>
@@ -74,7 +74,7 @@
         <visual name='visual'>
           <geometry>
             <mesh>
-<uri>/home/ayse/catkin_ws/src/PSO-for-perception-of-occluded-target-nodes/simulation_environment/meshes/bunny.dae</uri>
+              <uri>/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes/bunny.dae</uri>
               <scale>1.2 1.2 1.2</scale>
             </mesh>
           </geometry>
