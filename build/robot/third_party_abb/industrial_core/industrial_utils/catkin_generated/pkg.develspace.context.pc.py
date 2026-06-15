@@ -1,8 +1,0 @@
-# generated from catkin/cmake/template/pkg.context.pc.in
-CATKIN_PACKAGE_PREFIX = ""
-PROJECT_PKG_CONFIG_INCLUDE_DIRS = "/home/ayse/Desktop/RecedingHorizon/src/robot/third_party_abb/industrial_core/industrial_utils/include".split(';') if "/home/ayse/Desktop/RecedingHorizon/src/robot/third_party_abb/industrial_core/industrial_utils/include" != "" else []
-PROJECT_CATKIN_DEPENDS = "roscpp;urdf".replace(';', ' ')
-PKG_CONFIG_LIBRARIES_WITH_PREFIX = "-lindustrial_utils".split(';') if "-lindustrial_utils" != "" else []
-PROJECT_NAME = "industrial_utils"
-PROJECT_SPACE_DIR = "/home/ayse/Desktop/RecedingHorizon/devel"
-PROJECT_VERSION = "0.7.3"

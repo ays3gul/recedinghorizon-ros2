@@ -1,8 +1,0 @@
-prefix=/home/ayse/Desktop/RecedingHorizon/devel
-
-Name: abb_control
-Description: Description of abb_control
-Version: 0.0.0
-Cflags: -I/home/ayse/Desktop/RecedingHorizon/devel/include -I/home/ayse/Desktop/RecedingHorizon/src/robot/abb_control/include
-Libs: -L${prefix}/lib -labb_control
-Requires: message_runtime moveit_ros_planning_interface roscpp rospy utils

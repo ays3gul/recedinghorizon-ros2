@@ -1,8 +1,0 @@
-prefix=/home/ayse/Desktop/RecedingHorizon/devel
-
-Name: utils
-Description: Description of utils
-Version: 0.0.0
-Cflags: -I/home/ayse/Desktop/RecedingHorizon/devel/include -I/home/ayse/Desktop/RecedingHorizon/src/common/utils/include
-Libs: -L${prefix}/lib -lutils
-Requires: message_runtime roscpp rospy

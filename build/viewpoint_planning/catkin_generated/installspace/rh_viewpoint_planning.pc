@@ -1,8 +1,0 @@
-prefix=/home/ayse/Desktop/RecedingHorizon/install
-
-Name: rh_viewpoint_planning
-Description: Description of rh_viewpoint_planning
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

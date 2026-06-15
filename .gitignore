@@ -1,0 +1,24 @@
+# Build / install artifacts
+build/
+devel/
+install/
+log/
+logs/
+
+# Experiment results (yeniden üretilebilir, repo'ya dahil edilmez)
+results/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# ROS
+*.bag
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store

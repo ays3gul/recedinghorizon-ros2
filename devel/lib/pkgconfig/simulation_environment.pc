@@ -1,8 +1,0 @@
-prefix=/home/ayse/Desktop/RecedingHorizon/devel
-
-Name: simulation_environment
-Description: Description of simulation_environment
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

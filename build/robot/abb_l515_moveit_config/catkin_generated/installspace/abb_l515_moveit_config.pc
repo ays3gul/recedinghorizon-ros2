@@ -1,8 +1,0 @@
-prefix=/home/ayse/Desktop/RecedingHorizon/install
-
-Name: abb_l515_moveit_config
-Description: Description of abb_l515_moveit_config
-Version: 0.3.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

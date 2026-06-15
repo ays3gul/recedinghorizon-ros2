@@ -1,8 +1,0 @@
-prefix=/home/ayse/Desktop/RecedingHorizon/devel
-
-Name: industrial_robot_client
-Description: Description of industrial_robot_client
-Version: 0.7.3
-Cflags: -I/home/ayse/Desktop/RecedingHorizon/src/robot/third_party_abb/industrial_core/industrial_robot_client/include
-Libs: -L${prefix}/lib -lindustrial_robot_client_dummy
-Requires: actionlib actionlib_msgs control_msgs industrial_msgs industrial_utils roscpp sensor_msgs simple_message std_msgs trajectory_msgs urdf

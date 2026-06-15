@@ -1,7 +1,0 @@
-set(abb_control_SETUP_PY_SETUP_MODULE "distutils.core")
-set(abb_control_SETUP_PY_VERSION "0.0.0")
-set(abb_control_SETUP_PY_SCRIPTS "")
-set(abb_control_SETUP_PY_PACKAGES "abb_control")
-set(abb_control_SETUP_PY_PACKAGE_DIRS "src/abb_control")
-set(abb_control_SETUP_PY_MODULES "")
-set(abb_control_SETUP_PY_MODULE_DIRS "")

@@ -1,7 +1,0 @@
-set(rh_viewpoint_planning_SETUP_PY_SETUP_MODULE "distutils.core")
-set(rh_viewpoint_planning_SETUP_PY_VERSION "0.0.0")
-set(rh_viewpoint_planning_SETUP_PY_SCRIPTS "")
-set(rh_viewpoint_planning_SETUP_PY_PACKAGES "viewpoint_planners;perception;scene_representation")
-set(rh_viewpoint_planning_SETUP_PY_PACKAGE_DIRS "src/viewpoint_planners;src/perception;src/scene_representation")
-set(rh_viewpoint_planning_SETUP_PY_MODULES "")
-set(rh_viewpoint_planning_SETUP_PY_MODULE_DIRS "")
