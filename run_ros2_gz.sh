@@ -74,6 +74,7 @@ export USE_SIM_TIME=true
 
 echo "[run_ros2_gz.sh] Planner: $PLANNER | Script: $(basename $PYTHON_SCRIPT)"
 
+cd "$SCRIPT_DIR"
 exec "$CONDA_PYTHON" -u \
     "$PYTHON_SCRIPT" \
     --ros-args -p use_sim_time:=true "$@"
