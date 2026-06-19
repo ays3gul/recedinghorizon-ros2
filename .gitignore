@@ -22,3 +22,6 @@ __pycache__/
 .idea/
 *.swp
 .DS_Store
+
+__pycache__/
+*.pyc
