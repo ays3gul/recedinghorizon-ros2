@@ -49,7 +49,7 @@
       <gravity>0 0 -9.8</gravity>
     </physics>
     <model name='bunny'>
-      <pose>0.5 -0.4 1.0 0 0 0</pose>
+      <pose>0.5 -0.25 1.0 0 0 0</pose>
       <static>0</static>
       <link name='link'>
         <gravity>0</gravity>

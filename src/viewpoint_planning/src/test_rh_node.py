@@ -19,6 +19,11 @@ import matplotlib.pyplot as plt
 
 import ros2_node  # ROS 2 singleton node (replaces rospy.init_node)
 
+# Absolute results root so ROS2's CWD changes don't break relative paths
+_RESULTS_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "results")
+)
+
 from viewpoint_planners.viewpoint_planning import ViewpointPlanning
 from metrics import compute_all_metrics, detect_occlusion_type, save_and_print
 from plots.plot_coverage import plot_coverage_progression
@@ -48,7 +53,9 @@ RH_PARAMS = {
     "discount":       float(os.environ.get("RH_GAMMA", 0.85)),
     "step_size":      float(os.environ.get("RH_STEP", 0.065)),
     "use_spherical_bounds": os.environ.get("RH_SHELL", "0") != "0",
-    "occlusion_bonus": float(os.environ.get("OCC_BONUS", 2.0)),
+    "occlusion_bonus":      float(os.environ.get("OCC_BONUS", 2.0)),
+    "stagnation_patience":  int(os.environ.get("RH_STAG_P", 4)),
+    "stagnation_threshold": float(os.environ.get("RH_STAG_T", 1.5)),
 }
 K = RH_PARAMS["num_candidates"]
 H = RH_PARAMS["horizon"]
@@ -58,7 +65,7 @@ def make_run_dir(occ):
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     shell = "shell" if RH_PARAMS["use_spherical_bounds"] else "box"
     name = f"run_{ts}_exp{EXPERIMENT}_{occ}_K{K}_H{H}_{shell}"
-    run_dir = os.path.join("results", name)
+    run_dir = os.path.join(_RESULTS_ROOT, name)
     os.makedirs(run_dir, exist_ok=True)
     return run_dir
 
@@ -181,6 +188,8 @@ def run_single_trial(trial_idx, occ, run_dir):
         params={**RH_PARAMS, "trial": trial_idx, "seed": trial_seed},
         target_voxels=target_voxels,
         mesh_coordinates=mesh_coords,
+        voxels_seen=vp.voxels_seen_rh.tolist(),
+        voxels_total=vp.voxels_total_rh.tolist(),
     )
     results["sigma_series"] = vp.sigma_rh.tolist()
     results["occluded_recall_series"] = vp.occluded_recall_rh.tolist()

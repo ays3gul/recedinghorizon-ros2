@@ -217,6 +217,8 @@ def collect_results(vp, method, occ):
         ray_calls = vp.ray_calls_rh.tolist()
         target_v = vp.rh_planner.target_voxels
         sigma = vp.sigma_rh.tolist()
+        voxels_seen = vp.voxels_seen_rh.tolist() if hasattr(vp, "voxels_seen_rh") else None
+        voxels_total = vp.voxels_total_rh.tolist() if hasattr(vp, "voxels_total_rh") else None
         params = {
             "K": 10,
             "H": "adaptive: 2/3/5",
@@ -234,6 +236,8 @@ def collect_results(vp, method, occ):
         ray_calls = vp.ray_calls_grad.tolist()
         target_v = getattr(vp, "target_voxels_grad", None)
         sigma = vp.sigma_grad.tolist()
+        voxels_seen = vp.voxels_seen_grad.tolist() if hasattr(vp, "voxels_seen_grad") else None
+        voxels_total = vp.voxels_total_grad.tolist() if hasattr(vp, "voxels_total_grad") else None
         params = {"num_samples": 1, "lr": 0.03}
 
     if isinstance(target_v, np.ndarray) and target_v.ndim < 2:
@@ -251,6 +255,8 @@ def collect_results(vp, method, occ):
         params=params,
         target_voxels=target_v,
         mesh_coordinates=vp.mesh_coordinates,
+        voxels_seen=voxels_seen,
+        voxels_total=voxels_total,
     )
     results["sigma_series"] = sigma
     return results

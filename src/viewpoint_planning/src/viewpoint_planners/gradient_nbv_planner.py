@@ -8,18 +8,12 @@ from scipy.spatial import KDTree
 from scene_representation.voxel_grid import VoxelGrid
 from utils.py_utils import numpy_to_pose, numpy_to_pose_array
 from utils.torch_utils import look_at_rotation, transform_from_rotation_translation
-
-
-class _NoOpVisualizer:
-    """ROS 2 stub — RViz visualization calls are silently ignored."""
-    def __getattr__(self, name):
-        return lambda *args, **kwargs: None
+from utils.rviz_visualizer import RvizVisualizer
 
 
 class GradientNBVPlanner(nn.Module):
     """
     Burusa et al. (ICRA 2024) gradient-based local NBV planner.
-    ROS 2 Jazzy compatible — RvizVisualizer replaced with no-op stub.
     """
 
     def __init__(
@@ -27,7 +21,7 @@ class GradientNBVPlanner(nn.Module):
         start_pose: np.array,
         grid_size: np.array = np.array([0.3, 0.6, 0.3]),
         voxel_size: np.array = np.array([0.003]),
-        grid_center: np.array = np.array([0.5, -0.4, 1.1]),
+        grid_center: np.array = np.array([0.5, -0.25, 1.1]),
         image_size: np.array = np.array([600, 450]),
         intrinsics: np.array = np.array(
             [
@@ -39,7 +33,7 @@ class GradientNBVPlanner(nn.Module):
         num_pts_per_ray: int = 128,
         num_features: int = 4,
         num_samples: int = 1,
-        target_params: np.array = np.array([0.5, -0.4, 1.1]),
+        target_params: np.array = np.array([0.5, -0.25, 1.1]),
         mesh_coordinates: np.array = None,
         mesh_tree: KDTree = None,
     ) -> None:
@@ -65,7 +59,7 @@ class GradientNBVPlanner(nn.Module):
             device=self.device,
         )
         self.num_samples = num_samples
-        self.rviz_visualizer = _NoOpVisualizer()  # ROS 2: no-op stub
+        self.rviz_visualizer = RvizVisualizer()
 
         self.mesh_coordinates = mesh_coordinates
         self.mesh_tree = mesh_tree
@@ -76,6 +70,7 @@ class GradientNBVPlanner(nn.Module):
         self.last_tp = 0
         self.last_fp = 0
         self.last_fn = 0
+
 
     def optimization_params(self, start_pose, target_params):
         self.camera_params = nn.Parameter(
@@ -109,8 +104,8 @@ class GradientNBVPlanner(nn.Module):
         coverage = self.voxel_grid.insert_depth_and_semantics(
             depth_image, semantics, transform
         )
-        if coverage is not None:
-            coverage = coverage.cpu().numpy()
+        if coverage is not None and hasattr(coverage, "cpu"):
+            coverage = float(coverage.cpu().numpy())
         return coverage
 
     def loss(self, target_pos):
@@ -268,5 +263,12 @@ class GradientNBVPlanner(nn.Module):
         return float(dists.mean())
 
     def visualize(self):
-        """No-op in ROS 2 (RViz visualizer removed)."""
-        pass
+        voxel_points, sem_conf_scores, sem_class_ids = self.get_occupied_points()
+        if len(voxel_points) > 0:
+            self.rviz_visualizer.visualize_voxels(voxel_points, sem_conf_scores, sem_class_ids)
+        target = self.target_params.detach().cpu().numpy()
+        rois = np.array([[*target, 1.0, 0.0, 0.0, 0.0]])
+        self.rviz_visualizer.visualize_rois(numpy_to_pose_array(rois))
+        self.rviz_visualizer.visualize_camera_bounds(self.camera_bounds.cpu().numpy())
+        viewpoint = self.get_viewpoint()
+        self.rviz_visualizer.visualize_viewpoint(numpy_to_pose(viewpoint))

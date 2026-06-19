@@ -55,7 +55,9 @@ class RealsenseROSCapturer:
         data = self._bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough").astype(
             "float32"
         )
-        if not self.use_sim:
+        # Gazebo sends 32FC1 (float32, already in metres).
+        # Real RealSense cameras send 16UC1 (uint16, millimetres → divide by 1000).
+        if msg.encoding in ("16UC1", "16uc1"):
             data = data / 1000.0
         self.depth_image = data
 
@@ -74,6 +76,13 @@ class RealsenseROSCapturer:
         if wait_for_new:
             self._new_frame_event.clear()
             self._new_frame_event.wait(timeout=timeout)
+        # Wait an extra second for camera_info if it hasn't arrived yet — camera_info
+        # is published on a separate topic and can lag behind color frames.
+        if self.camera_info is None:
+            import time as _time
+            deadline = _time.monotonic() + 5.0
+            while self.camera_info is None and _time.monotonic() < deadline:
+                _time.sleep(0.05)
         color_output = {"color_image": self.color_image}
         depth_output = {"depth_image": self.depth_image, "points": self.points}
         return self.camera_info, color_output, depth_output

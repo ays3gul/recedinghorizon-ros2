@@ -32,7 +32,8 @@ import os
 
 def compute_all_metrics(coverages, recalls, precisions, distances, times,
                         ray_calls, method_name, occlusion_type, params,
-                        target_voxels=None, mesh_coordinates=None, max_achievable_coverage=100.0):
+                        target_voxels=None, mesh_coordinates=None, max_achievable_coverage=100.0,
+                        voxels_seen=None, voxels_total=None):
     """
     Compute all evaluation metrics from raw per-iteration arrays.
     
@@ -167,6 +168,8 @@ def compute_all_metrics(coverages, recalls, precisions, distances, times,
 
         # Per-iteration arrays
         "coverages": [round(c, 2) for c in coverages],
+        "voxels_seen": [int(v) for v in voxels_seen] if voxels_seen is not None else None,
+        "voxels_total": int(voxels_total[-1]) if voxels_total is not None and len(voxels_total) > 0 else None,
         "f1_scores": f1_scores,
         "recalls": [round(r, 4) for r in recalls],
         "precisions": [round(p, 4) for p in precisions],
@@ -373,6 +376,7 @@ def save_and_print(results, prefix="results", experiment="D"):
 
     # Save JSON
     fname = f"{prefix}_{method.lower().replace('-','_')}_{occ}.json"
+    os.makedirs(os.path.dirname(fname), exist_ok=True)
     with open(fname, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\n  Saved -> {fname}\n")

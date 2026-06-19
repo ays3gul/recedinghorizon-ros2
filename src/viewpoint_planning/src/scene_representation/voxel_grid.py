@@ -35,6 +35,7 @@ class VoxelGrid:
         num_pts_per_ray: int = 128,
         num_features: int = 4,
         eps: torch.float32 = 1e-7,
+        n_target_roi: int = None,
         device: torch.device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu"
         ),
@@ -85,6 +86,9 @@ class VoxelGrid:
         self.voxel_grid[..., 1] = 0.5  # Initialize occupancy probability as 0.5
         self.voxel_grid[..., 2] = self.eps  # Initialize semantic confidence close to 0
         self.voxel_grid[..., 3] = -1  # Initialize semantic class to background
+        self.n_target_roi = n_target_roi  # unique mesh voxels in ROI — coverage denominator
+        self.n_seen = 0    # voxels seen so far (updated by insert_depth_and_semantics)
+        self.n_total = 0   # total ROI voxels (denominator)
         # Define regions of interest around the target
         self.set_target_roi(target_params)
 
@@ -185,6 +189,8 @@ class VoxelGrid:
         ray_occ[:, -2:, :] = points_mask.permute(1, 0).repeat(1, 2).unsqueeze(-1)
         log_odds[..., 0] += ray_occ.view(-1, 1)[valid_indices, -1]
         # Update the log odds of the semantic probabilities
+        # semantics is (H, W, 2) row-major; camera_coords is also (H*W, 3) row-major
+        # (element k = r*W+c → pixel (u=c, v=r)). Plain view(-1, 2) aligns indices. ✓
         ray_sem = self.ray_sem.clone()
         ray_sem[..., -1, :] = semantics.view(-1, 2)
         ray_sem = ray_sem.view(-1, 2)
@@ -195,27 +201,27 @@ class VoxelGrid:
         self.voxel_grid[..., 1:3] = torch.clamp(
             self.voxel_grid[..., 1:3], self.eps, 1.0 - self.eps
         )
-        # Update semantic class label (index 3) for occupied voxels
+        # Update semantic class label (index 3) for occupied voxels only.
         sem_labels = ray_sem[valid_indices, 1]
         occupied_mask = sem_labels >= 0
         if occupied_mask.any():
             self.voxel_grid[gx[occupied_mask], gy[occupied_mask], gz[occupied_mask], 3] = sem_labels[occupied_mask]
-        # Track how many ROI voxels are theoretically visible
-        # (will be updated via set_max_visible_voxels after first real measurement)
-        self.max_visible_roi_voxels = None
-        self.voxel_grid[gx, gy, gz, 3] = ray_sem[valid_indices, 1]
-        # Check the values within the target bounds and count the number of updated voxels
+        # ROI coverage (Burusa et al. 2024, Sec. VI.B.1):
+        # percentage of ROI voxels viewed by the camera from at least one viewpoint,
+        # out of ALL voxels in the ROI. Channel 2 is initialised to 0.5 inside the ROI
+        # and moves away from 0.5 whenever a ray passes through — so != 0.5 means "viewed."
         if self.target_bounds is not None:
             target_voxels = self.voxel_grid[
-                self.target_bounds[0] : self.target_bounds[3],
-                self.target_bounds[1] : self.target_bounds[4],
-                self.target_bounds[2] : self.target_bounds[5],
+                self.target_bounds[0]:self.target_bounds[3],
+                self.target_bounds[1]:self.target_bounds[4],
+                self.target_bounds[2]:self.target_bounds[5],
                 2,
             ]
             n_seen = torch.sum((target_voxels != 0.5))
-            denom  = self.max_visible_roi_voxels if self.max_visible_roi_voxels else target_voxels.numel()
-            coverage = n_seen / denom * 100
-            #coverage = np.sum(min_dist_to_reconstruction < threshold) / len(visible_mesh_points) * 100
+            n_total = target_voxels.numel()
+            self.n_seen = int(n_seen.item())
+            self.n_total = int(n_total)
+            coverage = self.n_seen / float(n_total) * 100
             return coverage
 
     def compute_gain(

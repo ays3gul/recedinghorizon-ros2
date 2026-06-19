@@ -13,6 +13,11 @@ import time
 import datetime
 import xml.etree.ElementTree as ET
 
+# Absolute results root so ROS2's CWD changes don't break relative paths
+_RESULTS_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "results")
+)
+
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -80,7 +85,12 @@ def get_mesh_coordinates():
     vertices_swapped = vertices[:, [0, 2, 1]]
     scale = np.array([-1.2, 1.2, 1.2])
     z_corr = float(os.environ.get("MESH_Z_CORR", 0.048))
-    translation = np.array([0.5, -0.4, 1.0 - z_corr])
+    translation = np.array([0.5, -0.25, 1.0 - z_corr])
+    #translation = np.array([
+    #        TARGET_POSITION[0],
+     #       TARGET_POSITION[1],
+     #       TARGET_POSITION[2] - 0.10 - z_corr
+    #])
     coords = vertices_swapped * scale + translation
     return coords, KDTree(coords)
 
@@ -89,25 +99,25 @@ def spawn_occlusion(sdf, occ):
     if occ == "none":
         pass
     elif occ == "frontal":
-        sdf.spawn_sized_box(np.array([0.5, -0.25, 1.1]), 1, "medium")
+        sdf.spawn_named_model(np.array([0.5, -0.15, 1.12]), 1, "panel_front")
     elif occ == "half_box":
-        sdf.spawn_named_model(np.array([0.40, -0.40, 1.10]), 1, "panel_side")
-        sdf.spawn_named_model(np.array([0.64, -0.40, 1.10]), 2, "panel_side")
-        sdf.spawn_named_model(np.array([0.50, -0.51, 1.10]), 3, "panel_back")
+        sdf.spawn_named_model(np.array([0.40, -0.25, 1.10]), 1, "panel_side")
+        sdf.spawn_named_model(np.array([0.64, -0.25, 1.10]), 2, "panel_side")
+        sdf.spawn_named_model(np.array([0.50, -0.36, 1.10]), 3, "panel_back")
     elif occ == "tunnel":
         sdf.spawn_named_model(np.array([0.43, -0.25, 1.10]), 1, "panel_tunnel")
         sdf.spawn_named_model(np.array([0.57, -0.25, 1.10]), 2, "panel_tunnel")
     elif occ == "well":
-        sdf.spawn_named_model(np.array([0.40, -0.40, 1.08]), 1, "panel_side_low")
-        sdf.spawn_named_model(np.array([0.64, -0.40, 1.08]), 2, "panel_side_low")
-        sdf.spawn_named_model(np.array([0.52, -0.28, 1.08]), 3, "panel_front_low")
-        sdf.spawn_named_model(np.array([0.52, -0.52, 1.08]), 4, "panel_front_low")
+        sdf.spawn_named_model(np.array([0.40, -0.25, 1.08]), 1, "panel_side_low")
+        sdf.spawn_named_model(np.array([0.64, -0.25, 1.08]), 2, "panel_side_low")
+        sdf.spawn_named_model(np.array([0.52, -0.13, 1.08]), 3, "panel_front_low")
+        sdf.spawn_named_model(np.array([0.52, -0.37, 1.08]), 4, "panel_front_low")
 
 
 def make_run_dir(occ):
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     name = f"run_{ts}_exp{EXPERIMENT}_{occ}_GradientNBV"
-    d = os.path.join("results", name)
+    d = os.path.join(_RESULTS_ROOT, name)
     os.makedirs(d, exist_ok=True)
     return d
 
@@ -141,6 +151,7 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
     distances = [0.0]; times = [0.0]; ray_calls = [0]
     tp = [0]; fp = [0]; fn = [0]
     sigmas = [0.0]; occ_recalls = [0.0]
+    voxels_seen = [0]; voxels_total = [0]
     recon_snapshots = []
     trail = [start_pose[:3].copy()]
 
@@ -157,6 +168,8 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
                 cov = float(cov) if cov is not None else coverages[-1]
             else:
                 cov = coverages[-1]
+            voxels_seen.append(planner.voxel_grid.n_seen)
+            voxels_total.append(planner.voxel_grid.n_total)
             d = math.sqrt(sum((viewpoint[k]-trail[-1][k])**2 for k in range(3)))
             trail.append(viewpoint[:3].copy())
             distances.append(distances[-1] + d)
@@ -164,6 +177,8 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
                 planner.set_occluded_mesh_points()
         else:
             cov = coverages[-1]
+            voxels_seen.append(voxels_seen[-1])
+            voxels_total.append(voxels_total[-1])
             distances.append(distances[-1])
         coverages.append(cov)
         times.append(times[-1] + (time.time() - t0))
@@ -194,6 +209,7 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
         print(f"[GradNBV] coverage={cov:.4f} | loss={float(loss):.4f} | "
               f"F1={f1:.4f} | recall={rec:.4f} | precision={prec:.4f} | "
               f"occ_recall={occ_recalls[-1]:.4f}")
+        planner.visualize()
 
     results = compute_all_metrics(
         coverages=coverages, recalls=recalls, precisions=precisions,
@@ -202,6 +218,7 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
         params={"planner": "GradientNBV", "lr": 0.03, "trial": trial_idx,
                 "seed": fc_seed_for_trial(trial_idx)},
         target_voxels=planner.target_voxels, mesh_coordinates=mesh_coords,
+        voxels_seen=voxels_seen, voxels_total=voxels_total,
     )
     results["tp_series"] = tp; results["fp_series"] = fp; results["fn_series"] = fn
     results["sigma_series"] = sigmas
@@ -264,6 +281,56 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
     return results
 
 
+def summarize(all_results, occ, run_dir):
+    def finals(key):
+        return [r[key] for r in all_results]
+
+    summary = {
+        "occlusion": occ,
+        "num_trials": len(all_results),
+        "num_iters": NUM_ITERS,
+        "planner": "GradientNBV",
+        "per_trial": [
+            {
+                "trial": i,
+                "final_coverage": r["final_coverage"],
+                "final_f1": r["final_f1"],
+                "final_distance": r["final_distance"],
+                "total_ray_calls": r["total_ray_calls"],
+                "coverage_auc": r["coverage_auc"],
+                "tp_final": r["tp_series"][-1],
+                "fp_final": r["fp_series"][-1],
+                "fn_final": r["fn_series"][-1],
+            }
+            for i, r in enumerate(all_results)
+        ],
+        "mean": {},
+        "std": {},
+    }
+    for key in ["final_coverage", "final_f1", "final_distance",
+                "total_ray_calls", "coverage_auc"]:
+        vals = np.array(finals(key), dtype=float)
+        summary["mean"][key] = round(float(vals.mean()), 4)
+        summary["std"][key] = round(float(vals.std()), 4)
+
+    path = os.path.join(run_dir, "summary.json")
+    with open(path, "w") as f:
+        json.dump(summary, f, indent=2)
+
+    print(f"\n{'#'*60}")
+    print(f"  SUMMARY over {len(all_results)} trial(s)  |  Occlusion: {occ}")
+    print(f"{'#'*60}")
+    print(f"  Final coverage : {summary['mean']['final_coverage']:.2f} "
+          f"+/- {summary['std']['final_coverage']:.2f} %")
+    print(f"  Final F1       : {summary['mean']['final_f1']*100:.2f} "
+          f"+/- {summary['std']['final_f1']*100:.2f} %")
+    print(f"  Trajectory dist: {summary['mean']['final_distance']:.3f} "
+          f"+/- {summary['std']['final_distance']:.3f} m")
+    print(f"  Coverage AUC   : {summary['mean']['coverage_auc']:.2f}")
+    print(f"  Saved -> {path}\n")
+    return summary
+
+
 if __name__ == "__main__":
     ros2_node.init("gradient_test")
 
@@ -292,5 +359,6 @@ if __name__ == "__main__":
     all_results = [run_single_trial(t, occ, run_dir, mesh_coords, mesh_tree,
                                     arm, perceiver, sampler)
                    for t in range(NUM_TRIALS)]
+    summarize(all_results, occ, run_dir)
     print("\nGradientNBV baseline complete.")
     ros2_node.shutdown()

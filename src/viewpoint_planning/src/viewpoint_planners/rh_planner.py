@@ -18,7 +18,7 @@ class RHPlanner:
         mesh_tree,
         grid_size: np.array = np.array([0.3, 0.6, 0.3]),
         voxel_size: np.array = np.array([0.003]),
-        grid_center: np.array = np.array([0.5, -0.4, 1.1]),
+        grid_center: np.array = np.array([0.5, -0.25, 1.1]),
         image_size: np.array = np.array([600, 450]),
         intrinsics: np.array = np.array([
             [685.5028076171875, 0.0, 485.35955810546875],
@@ -28,7 +28,7 @@ class RHPlanner:
         num_pts_per_ray: int = 128,
         num_features: int = 4,
         num_samples: int = 1,
-        target_params: np.array = np.array([0.5, -0.4, 1.1]),
+        target_params: np.array = np.array([0.5, -0.25, 1.1]),
         # RH parameters
         horizon: int = 3,
         num_candidates: int = 10,
@@ -44,7 +44,8 @@ class RHPlanner:
                                       # has no such term, so it is disabled for
                                       # the fair baseline comparison. Set >0
                                       # (e.g. 2.0) to re-enable as an ablation.
-        stagnation_patience: int = 4, # iters without coverage gain → then escape
+        stagnation_patience: int = 4,   # iters without coverage gain → then escape
+        stagnation_threshold: float = 1.5,  # min % gain to count as non-stagnant
         rng_seed: int = 42,
         robot_reach_bounds: np.array = None,
         # DEFAULT False = OFF: the spherical orbital shell is an RH-specific
@@ -109,6 +110,7 @@ class RHPlanner:
         self.mesh_coordinates  = mesh_coordinates
         self.mesh_tree         = mesh_tree
 
+
         # RH hyperparameters
         self.horizon        = horizon
         self.num_candidates = num_candidates
@@ -124,11 +126,10 @@ class RHPlanner:
         )
 
 
-        # stagnation recovery state
-        # if coverage does not improve for `stagnation_patience` iterations, the camera is forced to the antipodal point on the orbit sphere, breaking the local optimum.
-        self.stagnation_patience  = stagnation_patience
-        self._stagnation_counter  = 0
-        self._last_coverage       = 0.0
+        self.stagnation_patience   = stagnation_patience
+        self.stagnation_threshold  = stagnation_threshold
+        self._stagnation_counter   = 0
+        self._last_coverage        = 0.0
 
         # Ray-tracing counter (cumulative, never reset)
         self.ray_trace_count = 0
@@ -152,7 +153,8 @@ class RHPlanner:
         print(
             f"[RHPlanner] K={num_candidates}, H={horizon}, "
             f"r=[{r_min},{r_max}], occlusion_bonus={occlusion_bonus}, "
-            f"stagnation_patience={stagnation_patience}"
+            f"stagnation_patience={stagnation_patience}, "
+            f"stagnation_threshold={stagnation_threshold}%"
         )
 
 
@@ -283,10 +285,14 @@ class RHPlanner:
         ).view(-1, 3)
 
         ray_points_nor = self.voxel_grid.normalize_3d_coordinate(ray_points)
-        ray_points_nor = ray_points_nor.view(1, -1, 1, 1, 3).repeat(2, 1, 1, 1, 1)
-        grid           = voxel_grid_data[None, ..., 1:3].permute(4, 0, 1, 2, 3)
-        occ_sem_confs  = F.grid_sample(grid, ray_points_nor, align_corners=True)
-        occ_sem_confs  = occ_sem_confs.view(2, -1, self.voxel_grid.num_pts_per_ray)
+        del ray_points  # free ~395 MB before grid_sample to avoid OOM
+        ray_points_nor = ray_points_nor.view(1, -1, 1, 1, 3)
+        # Use (1,2,Dx,Dy,Dz) grid so grid_sample handles both channels in one
+        # batch-1 call — eliminates the .repeat(2,...) that duplicated the
+        # 395 MB query tensor and caused OOM on the 16 GB laptop.
+        grid          = voxel_grid_data[None, ..., 1:3].permute(0, 4, 1, 2, 3)
+        occ_sem_confs = F.grid_sample(grid, ray_points_nor, align_corners=True)
+        occ_sem_confs = occ_sem_confs.view(2, -1, self.voxel_grid.num_pts_per_ray)
         occ_sem_confs  = occ_sem_confs.clamp(
             self.voxel_grid.eps, 1.0 - self.voxel_grid.eps
         )
@@ -347,6 +353,7 @@ class RHPlanner:
             grid_coords, self.voxel_grid.voxel_dims
         )
         valid_coords  = grid_coords[valid_indices].to(torch.long)
+        del ray_points, grid_coords, valid_indices  # free ~820 MB before unique/indexing
         if valid_coords.numel() == 0:
             return updated_grid
 
@@ -447,7 +454,7 @@ class RHPlanner:
         #     self.horizon = self._adaptive_horizon(current_coverage)
 
         # 4. Stagnation check
-        if abs(current_coverage - self._last_coverage) < 0.5:
+        if abs(current_coverage - self._last_coverage) < self.stagnation_threshold:
             self._stagnation_counter += 1
         else:
             self._stagnation_counter = 0
@@ -528,7 +535,7 @@ class RHPlanner:
     # Occluded recall
     def set_occluded_mesh_points(self):
         voxel_points, _, _ = self.get_occupied_points()
-        half   = 0.002
+        half   = 0.02
         radius = half * np.sqrt(3)
         if len(voxel_points) == 0:
             self.occluded_mesh_points = self.mesh_coordinates.copy()
@@ -555,7 +562,7 @@ class RHPlanner:
         if len(voxel_points) == 0:
             return 0.0
         voxel_tree = KDTree(voxel_points)
-        half       = 0.002
+        half       = 0.02
         radius     = half * np.sqrt(3)
         recovered  = 0
         for coord in self.occluded_mesh_points:
@@ -580,8 +587,8 @@ class RHPlanner:
         coverage = self.voxel_grid.insert_depth_and_semantics(
             depth_image, semantics, transform
         )
-        if coverage is not None:
-            coverage = coverage.cpu().numpy()
+        if coverage is not None and hasattr(coverage, "cpu"):
+            coverage = float(coverage.cpu().numpy())
         self.current_pos = position.clone()
         return coverage
 

@@ -4,7 +4,7 @@
 # PREREQUISITE — Gz Sim + robot stack must be running in a separate terminal:
 #   source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash
 #   export GZ_SIM_SYSTEM_PLUGIN_PATH=/opt/ros/jazzy/lib
-#   ros2 launch abb_l515_moveit_config_ros2 move_group_gz.launch.py
+#   ros2 launch ur5e_l515_description move_group_gz_ur5e.launch.py
 # Wait for "arm_control_node ready — serving move_arm_to_pose" before running.
 #
 # Usage:
@@ -57,6 +57,9 @@ else
     exit 1
 fi
 
+# Save the full ROS 2 LD_LIBRARY_PATH (needed by rviz2) before narrowing it
+ROS2_LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
+
 # Python path: project source trees + ROS 2 Jazzy packages
 export PYTHONPATH=\
 $SCRIPT_DIR/src/viewpoint_planning/src:\
@@ -72,8 +75,21 @@ export PYTHONUNBUFFERED=1
 # Tell rclpy to use Gz simulation clock
 export USE_SIM_TIME=true
 
+RVIZ_CONFIG="$SCRIPT_DIR/src/viewpoint_planning/config/viewpoint_planning.rviz"
+RVIZ="${RVIZ:-1}"
+RVIZ_PID=""
+if [ "$RVIZ" = "1" ] && [ -f "$RVIZ_CONFIG" ]; then
+    echo "[run_ros2_gz.sh] Launching RViz2..."
+    LD_LIBRARY_PATH="$ROS2_LD_LIBRARY_PATH" rviz2 -d "$RVIZ_CONFIG" &
+    RVIZ_PID=$!
+fi
+
 echo "[run_ros2_gz.sh] Planner: $PLANNER | Script: $(basename $PYTHON_SCRIPT)"
 
-exec "$CONDA_PYTHON" -u \
+"$CONDA_PYTHON" -u \
     "$PYTHON_SCRIPT" \
     --ros-args -p use_sim_time:=true "$@"
+STATUS=$?
+
+[ -n "$RVIZ_PID" ] && kill "$RVIZ_PID" 2>/dev/null
+exit $STATUS

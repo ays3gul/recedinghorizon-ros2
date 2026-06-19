@@ -26,6 +26,8 @@ _FALLBACK_SDF_PATH = (
 )
 # Gz Harmonic world name (must match worlds/bunny_gz.sdf)
 _GZ_WORLD = "bunny_world"
+# Vendored gz binary — may not be on PATH even when present
+_GZ_BIN = "/opt/ros/jazzy/opt/gz_tools_vendor/bin/gz"
 
 
 def _euler_to_quat(r, p, y):
@@ -34,7 +36,9 @@ def _euler_to_quat(r, p, y):
 
 
 def _gz_available():
-    """True if the 'gz' CLI is on PATH (Gz Harmonic is running)."""
+    """True if the gz CLI binary exists (on PATH or at the vendored path)."""
+    if os.path.isfile(_GZ_BIN):
+        return True
     return subprocess.call(["which", "gz"], stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL) == 0
 
@@ -86,52 +90,36 @@ class SDFSpawner:
                                    z=float(q[2]), w=float(q[3])),
         )
 
-    def _spawn_gz(self, model_name, sdf_content, x, y, z):
-        """Spawn a model in Gz Harmonic using gz service directly."""
-        import os as _os, json as _json, tempfile as _tmp
-        _env = _os.environ.copy()
-        _gz_libs = [
-            "/opt/ros/jazzy/opt/gz_transport_vendor/lib",
-            "/opt/ros/jazzy/opt/gz_msgs_vendor/lib",
-            "/opt/ros/jazzy/opt/gz_common_vendor/lib",
-            "/opt/ros/jazzy/opt/gz_math_vendor/lib",
-            "/opt/ros/jazzy/opt/gz_utils_vendor/lib",
-            "/opt/ros/jazzy/opt/gz_sim_vendor/lib",
-            "/opt/ros/jazzy/opt/gz_plugin_vendor/lib",
-            "/opt/ros/jazzy/opt/sdformat_vendor/lib",
-            "/opt/ros/jazzy/opt/gz_fuel_tools_vendor/lib",
-        ]
-        _existing = _env.get("LD_LIBRARY_PATH", "")
-        _new_paths = ":".join(p for p in _gz_libs if p not in _existing)
-        _env["LD_LIBRARY_PATH"] = _new_paths + ":" + _existing
-        _env["GZ_PARTITION"] = _os.environ.get("GZ_PARTITION", "")
-        req = _json.dumps({
-            "name": model_name,
-            "allow_renaming": False,
-            "pose": {"position": {"x": x, "y": y, "z": z}},
-            "sdf": sdf_content,
-            "sdf_version": "1.6",
-            "world_name": _GZ_WORLD,
-        })
+    def _spawn_gz(self, model_name, sdf_path, x, y, z):
+        """Spawn a model in Gz Harmonic via gz service.
+
+        Runs through a bash shell that sources /opt/ros/jazzy/setup.bash so
+        gz-transport gets the full LD_LIBRARY_PATH it needs to reach the
+        running Gazebo server.  Uses sdf_filename: (file path) in the proto
+        request to avoid SDF-content escaping entirely.
+        """
+        import shlex as _shlex
+        req = (f"sdf_filename: '{sdf_path}' name: '{model_name}' "
+               f"pose {{ position {{ x: {x} y: {y} z: {z} }} }}")
+        shell_cmd = (
+            "source /opt/ros/jazzy/setup.bash && "
+            f"{_shlex.quote(_GZ_BIN)} service "
+            f"-s /world/{_GZ_WORLD}/create "
+            "--reqtype gz.msgs.EntityFactory "
+            "--reptype gz.msgs.Boolean "
+            "--timeout 5000 "
+            f"--req {_shlex.quote(req)}"
+        )
         try:
             result = subprocess.run(
-                [
-                    "/opt/ros/jazzy/opt/gz_tools_vendor/bin/gz",
-                    "service",
-                    "-s", f"/world/{_GZ_WORLD}/create",
-                    "--reqtype", "gz.msgs.EntityFactory",
-                    "--reptype", "gz.msgs.Boolean",
-                    "--timeout", "5000",
-                    "--req", f"sdf: '{sdf_content}' name: '{model_name}' "
-                             f"pose {{ position {{ x: {x} y: {y} z: {z} }} }}",
-                ],
+                ["/bin/bash", "-c", shell_cmd],
                 timeout=10,
                 capture_output=True,
                 text=True,
-                env=_env,
             )
-            if result.returncode != 0:
-                print(f"[SDFSpawner] Gz spawn failed for {model_name}: {result.stderr.strip()}")
+            if result.returncode != 0 or "true" not in result.stdout:
+                print(f"[SDFSpawner] Gz spawn failed for {model_name}: "
+                      f"{result.stderr.strip() or result.stdout.strip()}")
             else:
                 print(f"[SDFSpawner] Spawned {model_name} at ({x},{y},{z})")
         except Exception as e:
@@ -147,12 +135,7 @@ class SDFSpawner:
             if not os.path.exists(sdf_path):
                 print(f"[SDFSpawner] SDF not found: {sdf_path}")
                 return
-            try:
-                sdf_content = open(sdf_path).read()
-            except Exception as e:
-                print(f"[SDFSpawner] Cannot read {sdf_path}: {e}")
-                return
-            self._spawn_gz(model_name, sdf_content, x, y, z)
+            self._spawn_gz(model_name, sdf_path, x, y, z)
             return
 
         # Gazebo Classic path

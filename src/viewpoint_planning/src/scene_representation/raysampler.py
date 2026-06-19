@@ -56,7 +56,10 @@ class RaySampler:
         )
         self.device = device
         self.generate_camera_coords()
-        # Transformation from optical frame to camera frame
+        # T_oc: optical_frame → camera_color_frame (used in T_ows = T_cws @ T_oc).
+        # scipy intrinsic "xyz" [-90°, 0°, -90°] gives R = [[0,0,1],[-1,0,0],[0,-1,0]].
+        # Column 2 = [1,0,0]: optical +Z (depth forward) → camera_color_frame +X,
+        # which matches look_at_rotation ref=[1,0,0] pointing toward the target.
         r = scipy_r.from_euler("xyz", [-np.pi / 2, 0.0, -np.pi / 2])
         self.T_oc = T_from_rot_trans_np(r.as_matrix(), np.zeros((1, 3)))
         self.T_oc = torch.as_tensor(self.T_oc, dtype=torch.float32, device=self.device)
@@ -102,6 +105,10 @@ class RaySampler:
         # Otherwise, use the far clipping plane
         if depth_image is not None:
             depth_image[torch.isnan(depth_image)] = self.z_far
+            depth_image[torch.isinf(depth_image)] = self.z_far
+            # camera_coords is (H*W, 3) with row-major ordering (H outer, W inner):
+            # element k = r*W + c → pixel (u=c, v=r). depth_image is (H, W), so a
+            # plain row-major flatten gives index k = r*W + c → depth_image[r, c]. ✓
             max_depths = depth_image.view(1, -1)
         else:
             max_depths = self.z_far * torch.ones(
@@ -131,7 +138,6 @@ class RaySampler:
         :param points: point cloud
         :param transforms: transformation matrices
         """
-        points[..., 1] += 0.024  # TODO: remove this hack, only for gazebo
         T_oc = self.T_oc.clone().requires_grad_()
         T_cws = transforms.clone().to(torch.float32).requires_grad_()
         T_ows = T_cws @ T_oc
@@ -141,7 +147,6 @@ class RaySampler:
 
 
 if __name__ == "__main__":
-    # Create a ray sampler
     sampler = RaySampler(
         width=640,
         height=480,
@@ -155,12 +160,10 @@ if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("Camera coordinates:", sampler.camera_coords.shape)
 
-    # Transformation matrix
     T = np.eye(4).reshape(1, 4, 4)
     transforms = torch.tensor(T, dtype=torch.float32, device=sampler.device)
     depth_image = torch.ones((1, 640, 480), dtype=torch.float32, device=sampler.device)
 
-    # Compute the ray origins and directions
     ray_origins, ray_directions = sampler.ray_origins_directions(
         transforms, depth_image
     )
@@ -169,11 +172,3 @@ if __name__ == "__main__":
         ray_directions[:, :, None, :] * t_vals[None, :, None]
         + ray_origins[:, :, None, :]
     ).view(-1, 3)
-
-    # # Visualize the camera coordinates in Open3D
-    # origin_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.15)
-    # pcd = o3d.geometry.PointCloud()
-    # pcd.points = o3d.utility.Vector3dVector(
-    #     ray_points.detach().cpu().numpy().astype(np.float64)
-    # )
-    # o3d.visualization.draw_geometries([origin_frame, pcd])

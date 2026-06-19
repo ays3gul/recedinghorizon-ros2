@@ -155,6 +155,7 @@ class ViewpointSampler:
         self,
         target_position: np.array = np.array([0.5, -0.4, 1.0]),
         distance: float = 0.35,
+        #distance: float = 0.45,
     ) -> np.ndarray:
         """
         Predefine the start pose of the camera
@@ -165,6 +166,9 @@ class ViewpointSampler:
         position = np.array(
             [target_position[0], target_position[1] + distance, target_position[2]]
         )
+        #position = np.array(
+        #    [target_position[0], target_position[1] + distance, target_position[2] + 0.10]
+        #)
         orientation = look_at_rotation(position, target_position)
         pose = np.concatenate((position, orientation))
         return pose

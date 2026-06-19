@@ -3,7 +3,7 @@
 #
 # PREREQUISITE — robot stack must be running in a separate terminal:
 #   source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash
-#   ros2 launch abb_l515_moveit_config_ros2 move_group.launch.py
+#   ros2 launch ur5e_l515_description move_group_gz_ur5e.launch.py
 # Wait for "arm_control_node ready — serving move_arm_to_pose" before running this script.
 #
 # Usage:

@@ -13,6 +13,11 @@ from viewpoint_planners.rh_planner import RHPlanner
 from viewpoint_planners.viewpoint_sampler import ViewpointSampler
 from utils.py_utils import numpy_to_pose
 from utils.sdf_spawner import SDFSpawner
+from viewpoint_planners.fair_comparison_config import (
+    reach_bounds_for_start,
+    get_target_position as fc_get_target_position,
+    GRID_SIZE as FC_GRID_SIZE,
+)
 
 
 class ViewpointPlanning:
@@ -40,16 +45,14 @@ class ViewpointPlanning:
             "r_max": 0.45,
             "occlusion_bonus": 2.0,
             "stagnation_patience": 4,
+            "stagnation_threshold": 1.5,
             "use_spherical_bounds": True,
         }
         if rh_params:
             default_rh.update(rh_params)
         self.rh_params = default_rh
 
-        self.target_position = np.array([0.5, -0.4, 1.1])
-        _tp_env = os.environ.get("TARGET_POS")
-        if _tp_env:
-            self.target_position = np.array([float(v) for v in _tp_env.split(",")])
+        self.target_position = fc_get_target_position()
         self.config()
         self.mesh_coordinates, self.mesh_tree = self.get_mesh_coordinates()
 
@@ -74,14 +77,17 @@ class ViewpointPlanning:
             r_max=self.rh_params["r_max"],
             occlusion_bonus=self.rh_params["occlusion_bonus"],
             stagnation_patience=self.rh_params["stagnation_patience"],
+            stagnation_threshold=self.rh_params.get("stagnation_threshold", 1.5),
             use_spherical_bounds=self.rh_params["use_spherical_bounds"],
-            robot_reach_bounds=np.array([[0.30, -0.15, 0.97], [0.65, 0.05, 1.25]]),
+            robot_reach_bounds=reach_bounds_for_start(self.camera_pose),
         )
         init_time_rh = time.time() - start_time
 
         self.losses_rh = np.array([0.0])
         self.cumulative_time_rh = np.array([init_time_rh])
         self.coverages_rh = np.array([0.0])
+        self.voxels_seen_rh = np.array([0])
+        self.voxels_total_rh = np.array([0])
         self.trail_rh = [self.camera_pose[:3].copy()]
         self.trajectory_distance_rh = np.array([0.0])
         self.recall_rh = np.array([0.0])
@@ -126,10 +132,15 @@ class ViewpointPlanning:
         if self.arm_control:
             self.arm_control.move_arm_to_pose(numpy_to_pose(self.camera_pose))
 
-        self.grid_size = np.array([0.3, 0.6, 0.3])
+        self.grid_size = np.array(FC_GRID_SIZE, dtype=float)
         self.grid_center = self.target_position
 
         camera_info = self.perceiver.get_camera_info()
+        if camera_info is None:
+            raise RuntimeError(
+                "[ViewpointPlanning] Camera info not received within timeout. "
+                "Check that the simulation is running and the ros_gz_bridge camera topics are being published."
+            )
         self.image_size = np.array([camera_info.width, camera_info.height])
         self.intrinsics = np.array(camera_info.k).reshape(3, 3)  # ROS 2: lowercase k
 
@@ -140,22 +151,22 @@ class ViewpointPlanning:
         pass
 
     def spawn_frontal_occlusion(self):
-        self.sdf_spawner.spawn_sized_box(np.array([0.5, -0.25, 1.1]), 1, "medium")
+        self.sdf_spawner.spawn_named_model(np.array([0.5, -0.15, 1.12]), 1, "panel_front")
 
     def spawn_half_box_occlusion(self):
-        self.sdf_spawner.spawn_named_model(np.array([0.40, -0.40, 1.10]), 1, "panel_side")
-        self.sdf_spawner.spawn_named_model(np.array([0.64, -0.40, 1.10]), 2, "panel_side")
-        self.sdf_spawner.spawn_named_model(np.array([0.50, -0.51, 1.10]), 3, "panel_back")
+        self.sdf_spawner.spawn_named_model(np.array([0.40, -0.25, 1.10]), 1, "panel_side")
+        self.sdf_spawner.spawn_named_model(np.array([0.64, -0.25, 1.10]), 2, "panel_side")
+        self.sdf_spawner.spawn_named_model(np.array([0.50, -0.36, 1.10]), 3, "panel_back")
 
     def spawn_tunnel_occlusion(self):
         self.sdf_spawner.spawn_named_model(np.array([0.43, -0.25, 1.10]), 1, "panel_tunnel")
         self.sdf_spawner.spawn_named_model(np.array([0.57, -0.25, 1.10]), 2, "panel_tunnel")
 
     def spawn_well_occlusion(self):
-        self.sdf_spawner.spawn_named_model(np.array([0.40, -0.40, 1.08]), 1, "panel_side_low")
-        self.sdf_spawner.spawn_named_model(np.array([0.64, -0.40, 1.08]), 2, "panel_side_low")
-        self.sdf_spawner.spawn_named_model(np.array([0.52, -0.28, 1.08]), 3, "panel_front_low")
-        self.sdf_spawner.spawn_named_model(np.array([0.52, -0.52, 1.08]), 4, "panel_front_low")
+        self.sdf_spawner.spawn_named_model(np.array([0.40, -0.25, 1.08]), 1, "panel_side_low")
+        self.sdf_spawner.spawn_named_model(np.array([0.64, -0.25, 1.08]), 2, "panel_side_low")
+        self.sdf_spawner.spawn_named_model(np.array([0.52, -0.13, 1.08]), 3, "panel_front_low")
+        self.sdf_spawner.spawn_named_model(np.array([0.52, -0.37, 1.08]), 4, "panel_front_low")
 
     # -------------------------------------------------------------
     # RH execution
@@ -184,6 +195,9 @@ class ViewpointPlanning:
             if self.rh_planner.occluded_mesh_points is None:
                 self.rh_planner.set_occluded_mesh_points()
             self.coverages_rh = np.append(self.coverages_rh, coverage)
+            self.voxels_seen_rh = np.append(self.voxels_seen_rh, self.rh_planner.voxel_grid.n_seen)
+            self.voxels_total_rh = np.append(self.voxels_total_rh, self.rh_planner.voxel_grid.n_total)
+            self.rh_planner.visualize()
             self.trajectory_distance_rh = np.append(
                 self.trajectory_distance_rh,
                 self.trajectory_distance_rh[-1] + self._last_step_distance(),
@@ -208,6 +222,8 @@ class ViewpointPlanning:
                 )
             coverage = self.coverages_rh[-1]
             self.coverages_rh = np.append(self.coverages_rh, coverage)
+            self.voxels_seen_rh = np.append(self.voxels_seen_rh, self.voxels_seen_rh[-1])
+            self.voxels_total_rh = np.append(self.voxels_total_rh, self.voxels_total_rh[-1])
             self.trajectory_distance_rh = np.append(
                 self.trajectory_distance_rh, self.trajectory_distance_rh[-1]
             )
@@ -271,6 +287,8 @@ class ViewpointPlanning:
             "losses": self.losses_rh,
             "cumulative_time": self.cumulative_time_rh,
             "coverages": self.coverages_rh,
+            "voxels_seen": self.voxels_seen_rh,
+            "voxels_total": self.voxels_total_rh,
             "trajectory_distance": self.trajectory_distance_rh,
             "f1": self.f1_rh,
             "recall": self.recall_rh,
@@ -300,7 +318,7 @@ class ViewpointPlanning:
         vertices_swapped = vertices[:, [0, 2, 1]]
         scale = np.array([-1.2, 1.2, 1.2])
         z_corr = float(os.environ.get("MESH_Z_CORR", 0.048))
-        translation = np.array([0.5, -0.4, 1.0 - z_corr])
+        translation = np.array([0.5, -0.25, 1.0 - z_corr])
         transformed_coords = vertices_swapped * scale + translation
         mesh_tree = KDTree(transformed_coords)
         return transformed_coords, mesh_tree

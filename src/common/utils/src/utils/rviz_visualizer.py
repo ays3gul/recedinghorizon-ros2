@@ -135,28 +135,41 @@ class RvizVisualizer:
             marker.header.stamp = self._now()
             marker.ns = "rois"
             marker.id = i
-            marker.type = Marker.CUBE
+            marker.type = Marker.SPHERE
             marker.action = Marker.ADD
             marker.pose = pose
-            marker.scale = Vector3(x=0.09, y=0.09, z=0.09)
-            marker.color = ColorRGBA(r=0.0, g=0.0, b=1.0, a=0.8)
+            marker.scale = Vector3(x=0.02, y=0.02, z=0.02)
+            marker.color = ColorRGBA(r=1.0, g=0.5, b=0.0, a=1.0)
             marker_array.markers.append(marker)
         self.rois_pub.publish(marker_array)
 
     def visualize_camera_bounds(self, bounds: np.array) -> None:
-        center = np.mean(bounds, axis=0)
-        size   = np.max(bounds, axis=0) - np.min(bounds, axis=0)
+        lo = np.min(bounds, axis=0)
+        hi = np.max(bounds, axis=0)
+        corners = [
+            [lo[0], lo[1], lo[2]], [hi[0], lo[1], lo[2]],
+            [hi[0], hi[1], lo[2]], [lo[0], hi[1], lo[2]],
+            [lo[0], lo[1], hi[2]], [hi[0], lo[1], hi[2]],
+            [hi[0], hi[1], hi[2]], [lo[0], hi[1], hi[2]],
+        ]
+        edges = [
+            (0,1),(1,2),(2,3),(3,0),  # bottom face
+            (4,5),(5,6),(6,7),(7,4),  # top face
+            (0,4),(1,5),(2,6),(3,7),  # verticals
+        ]
         marker = Marker()
         marker.header.frame_id = self.world_frame_id
         marker.header.stamp = self._now()
         marker.ns = "camera_bounds"
         marker.id = 0
-        marker.type = Marker.CUBE
+        marker.type = Marker.LINE_LIST
         marker.action = Marker.ADD
-        marker.pose.position = Point(x=float(center[0]), y=float(center[1]),
-                                     z=float(center[2]))
-        marker.scale = Vector3(x=float(size[0]), y=float(size[1]), z=float(size[2]))
-        marker.color = ColorRGBA(r=0.0, g=0.0, b=1.0, a=0.3)
+        marker.pose.orientation.w = 1.0
+        marker.scale = Vector3(x=0.005, y=0.0, z=0.0)
+        marker.color = ColorRGBA(r=0.0, g=0.5, b=1.0, a=0.8)
+        for a, b in edges:
+            marker.points.append(Point(x=float(corners[a][0]), y=float(corners[a][1]), z=float(corners[a][2])))
+            marker.points.append(Point(x=float(corners[b][0]), y=float(corners[b][1]), z=float(corners[b][2])))
         self.camera_bounds_pub.publish(marker)
 
     def visualize_semantic_mean(self, mean: np.array) -> None:

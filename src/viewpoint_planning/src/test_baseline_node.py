@@ -87,7 +87,7 @@ def get_mesh_coordinates():
     vertices_swapped = vertices[:, [0, 2, 1]]
     scale = np.array([-1.2, 1.2, 1.2])
     z_corr = float(os.environ.get("MESH_Z_CORR", 0.048))
-    translation = np.array([0.5, -0.4, 1.0 - z_corr])
+    translation = np.array([0.5, -0.25, 1.0 - z_corr])
     coords = vertices_swapped * scale + translation
     return coords, __import__("scipy.spatial", fromlist=["KDTree"]).KDTree(coords)
 
@@ -96,19 +96,19 @@ def spawn_occlusion(sdf, occ):
     if occ == "none":
         pass
     elif occ == "frontal":
-        sdf.spawn_sized_box(np.array([0.5, -0.25, 1.1]), 1, "medium")
+        sdf.spawn_named_model(np.array([0.5, -0.15, 1.12]), 1, "panel_front")
     elif occ == "half_box":
-        sdf.spawn_named_model(np.array([0.40, -0.40, 1.10]), 1, "panel_side")
-        sdf.spawn_named_model(np.array([0.64, -0.40, 1.10]), 2, "panel_side")
-        sdf.spawn_named_model(np.array([0.50, -0.51, 1.10]), 3, "panel_back")
+        sdf.spawn_named_model(np.array([0.40, -0.25, 1.10]), 1, "panel_side")
+        sdf.spawn_named_model(np.array([0.64, -0.25, 1.10]), 2, "panel_side")
+        sdf.spawn_named_model(np.array([0.50, -0.36, 1.10]), 3, "panel_back")
     elif occ == "tunnel":
         sdf.spawn_named_model(np.array([0.43, -0.25, 1.10]), 1, "panel_tunnel")
         sdf.spawn_named_model(np.array([0.57, -0.25, 1.10]), 2, "panel_tunnel")
     elif occ == "well":
-        sdf.spawn_named_model(np.array([0.40, -0.40, 1.08]), 1, "panel_side_low")
-        sdf.spawn_named_model(np.array([0.64, -0.40, 1.08]), 2, "panel_side_low")
-        sdf.spawn_named_model(np.array([0.52, -0.28, 1.08]), 3, "panel_front_low")
-        sdf.spawn_named_model(np.array([0.52, -0.52, 1.08]), 4, "panel_front_low")
+        sdf.spawn_named_model(np.array([0.40, -0.25, 1.08]), 1, "panel_side_low")
+        sdf.spawn_named_model(np.array([0.64, -0.25, 1.08]), 2, "panel_side_low")
+        sdf.spawn_named_model(np.array([0.52, -0.13, 1.08]), 3, "panel_front_low")
+        sdf.spawn_named_model(np.array([0.52, -0.37, 1.08]), 4, "panel_front_low")
 
 
 def make_run_dir(occ):

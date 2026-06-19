@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 import time
 import random
+import math
+import threading
+import rclpy
 from geometry_msgs.msg import Pose, Point, Quaternion
 from abb_interfaces.srv import ArmGoal
 import ros2_node
+
+try:
+    import tf2_ros
+    _TF2_AVAILABLE = True
+except ImportError:
+    _TF2_AVAILABLE = False
 
 
 def RandomPoseGenerator(minx, maxx, miny, maxy, minz, maxz):
@@ -26,6 +35,14 @@ class ArmControlClient:
         self.maxy = 0.40
         self.minz = 1.00
         self.maxz = 1.40
+
+        # TF buffer for pose verification fallback
+        self._tf_buffer = None
+        self._tf_listener = None
+        if _TF2_AVAILABLE:
+            self._tf_buffer = tf2_ros.Buffer()
+            self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, node)
+
         node.get_logger().info(
             "[ArmControlClient] Waiting for move_arm_to_pose service..."
         )
@@ -37,16 +54,28 @@ class ArmControlClient:
         else:
             node.get_logger().info("[ArmControlClient] Arm control ready")
 
+    def _arm_at_pose(self, pose, pos_tol=0.08):
+        """Return True if camera_color_frame is within pos_tol of the requested pose."""
+        if self._tf_buffer is None:
+            return False
+        try:
+            from rclpy.time import Time
+            t = self._tf_buffer.lookup_transform(
+                'world', 'camera_color_frame', Time(), timeout=rclpy.duration.Duration(seconds=1.0)
+            )
+            dx = abs(t.transform.translation.x - pose.position.x)
+            dy = abs(t.transform.translation.y - pose.position.y)
+            dz = abs(t.transform.translation.z - pose.position.z)
+            return dx < pos_tol and dy < pos_tol and dz < pos_tol
+        except Exception:
+            return False
+
     def move_arm_to_pose(self, pose):
         node = ros2_node.get_node()
-        # Ensure the spin thread is alive before sending — it may have died during
-        # the long planning window if the rclpy context was inadvertently shut down.
-        import rclpy
         spin_thread = ros2_node._spin_thread
         if spin_thread is None or not spin_thread.is_alive():
             print(f"[ArmControlClient] Spin thread dead (rclpy.ok={rclpy.ok()}), restarting...")
             if rclpy.ok() and ros2_node._executor is not None:
-                import threading
                 ros2_node._spin_thread = threading.Thread(
                     target=ros2_node._executor.spin, daemon=True
                 )
@@ -59,18 +88,28 @@ class ArmControlClient:
             req = ArmGoal.Request()
             req.goal_pose = pose
             future = self.client.call_async(req)
-            deadline = time.monotonic() + 60.0
+            deadline = time.monotonic() + 180.0
             while not future.done():
                 if time.monotonic() > deadline:
-                    print("[ArmControlClient] Service call timed out after 60s")
+                    print("[ArmControlClient] Service call timed out after 180s")
                     return False
                 time.sleep(0.01)
             result = future.result()
             if result and result.success:
                 node.get_logger().info("[ArmControlClient] Arm arrived at pose")
-            else:
-                node.get_logger().error("[ArmControlClient] Arm motion failed")
-            return result.success if result else False
+                return True
+
+            # MoveIt2 execute() has a race condition where it reports failure
+            # even though the trajectory succeeded. Verify via TF before giving up.
+            time.sleep(1.5)
+            if self._arm_at_pose(pose):
+                node.get_logger().info(
+                    "[ArmControlClient] Arm arrived at pose (verified via TF)"
+                )
+                return True
+
+            node.get_logger().error("[ArmControlClient] Arm motion failed")
+            return False
         except Exception as e:
             print(f"[ArmControlClient] Service call failed: {e}")
             return False
