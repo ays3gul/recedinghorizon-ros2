@@ -114,10 +114,7 @@ def save_plots(vp, occ, out_dir, recon_snapshots=None):
         print("  [plot] skipping candidate plots (no candidate_history)")
 
     _try(lambda: plot_reconstruction_comparison(
-        target_voxels=(rh.all_target_voxels
-                       if getattr(rh, "all_target_voxels", None) is not None
-                       and len(rh.all_target_voxels) > 0
-                       else rh.target_voxels),
+        target_voxels=rh.target_voxels,
         mesh_coordinates=rh.mesh_coordinates,
         save_path=os.path.join(out_dir, f"reconstruction_rh_{occ}.png"),
         method_label="RH-NBV",
@@ -163,10 +160,7 @@ def run_single_trial(trial_idx, occ, run_dir):
         vp._diagnose_f1 = (EXPERIMENT == "D" and i == NUM_ITERS - 1)
         vp.run_rh()
         rh = vp.rh_planner
-        snap = (rh.all_target_voxels
-                if getattr(rh, "all_target_voxels", None) is not None
-                and len(rh.all_target_voxels) > 0
-                else rh.target_voxels)
+        snap = rh.target_voxels
         snap = (snap.copy() if isinstance(snap, np.ndarray) and snap.ndim == 2
                 else np.zeros((0, 3)))
         recon_snapshots.append(snap)

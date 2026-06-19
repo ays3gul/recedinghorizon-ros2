@@ -89,8 +89,8 @@ class PsoPlanner(PlannerEvalMixin):
 
         random_values = np.random.rand(self.n_particles, 3)
         random_values[:, 0] = random_values[:, 0] * 0.4 + start_pose[0] - 0.2
-        random_values[:, 1] = random_values[:, 1] * 0.2 + start_pose[1] - 0.1
-        random_values[:, 2] = random_values[:, 2] * 0.3 + start_pose[2] - 0.15
+        random_values[:, 1] = random_values[:, 1] * 0.4 + start_pose[1] - 0.2
+        random_values[:, 2] = random_values[:, 2] * 0.5 + start_pose[2] - 0.25
 
         self.X = torch.tensor(
             random_values, dtype=torch.float32, device=self.device,
@@ -149,9 +149,9 @@ class PsoPlanner(PlannerEvalMixin):
         )
         self.camera_bounds = torch.tensor(
             [
-                [start_pose[0] - 0.2, start_pose[1] - 0.1, start_pose[2] - 0.15,
+                [start_pose[0] - 0.2, start_pose[1] - 0.2, start_pose[2] - 0.25,
                  target_params[0] - 0.1, target_params[1] - 0.1, target_params[2] - 0.1],
-                [start_pose[0] + 0.2, start_pose[1] + 0.1, start_pose[2] + 0.15,
+                [start_pose[0] + 0.2, start_pose[1] + 0.2, start_pose[2] + 0.25,
                  target_params[0] + 0.1, target_params[1] + 0.1, target_params[2] + 0.1],
             ],
             dtype=torch.float32, device=self.device,

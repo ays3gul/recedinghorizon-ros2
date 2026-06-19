@@ -161,7 +161,10 @@ class PlannerEvalMixin:
     # ---- Occluded-recall baseline + recall (identical to RH) ----
     def set_occluded_mesh_points(self):
         voxel_points, _, _ = self.get_occupied_points()
-        half = 0.002
+        vs = self.voxel_grid.voxel_size
+        if hasattr(vs, "detach"):
+            vs = vs.detach().cpu().numpy()
+        half = float(np.asarray(vs).reshape(-1)[0]) * 4.0
         radius = half * np.sqrt(3)
         if len(voxel_points) == 0:
             self.occluded_mesh_points = self.mesh_coordinates.copy()
@@ -188,7 +191,10 @@ class PlannerEvalMixin:
         if len(voxel_points) == 0:
             return 0.0
         voxel_tree = KDTree(voxel_points)
-        half = 0.002
+        vs = self.voxel_grid.voxel_size
+        if hasattr(vs, "detach"):
+            vs = vs.detach().cpu().numpy()
+        half = float(np.asarray(vs).reshape(-1)[0]) * 4.0
         radius = half * np.sqrt(3)
         recovered = 0
         for coord in self.occluded_mesh_points:

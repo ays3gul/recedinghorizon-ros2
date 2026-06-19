@@ -83,9 +83,9 @@ class RandomPlanner(PlannerEvalMixin):
         )
         self.camera_bounds = np.array(
             [
-                [start_pose[0] - 0.2, start_pose[1] - 0.1, start_pose[2] - 0.15,
+                [start_pose[0] - 0.2, start_pose[1] - 0.2, start_pose[2] - 0.25,
                  target_params[0] - 0.2, target_params[1] - 0.2, target_params[2] - 0.2],
-                [start_pose[0] + 0.2, start_pose[1] + 0.1, start_pose[2] + 0.15,
+                [start_pose[0] + 0.2, start_pose[1] + 0.2, start_pose[2] + 0.25,
                  target_params[0] + 0.2, target_params[1] + 0.2, target_params[2] + 0.2],
             ]
         )

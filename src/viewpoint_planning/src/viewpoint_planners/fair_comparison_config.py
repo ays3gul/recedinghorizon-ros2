@@ -51,7 +51,7 @@ F1_THRESH_SCALE = 4.0  # x voxel_size
 # Axis-aligned camera workspace: start_pose +/- this half-width.
 # This is Burusa's GradientNBV box; RH mirrors it exactly in rh_planner.py.
 # ---------------------------------------------------------------------------
-CAMERA_BOUNDS_HALFWIDTHS = np.array([0.2, 0.1, 0.15], dtype=np.float32)
+CAMERA_BOUNDS_HALFWIDTHS = np.array([0.2, 0.2, 0.25], dtype=np.float32)
 
 
 # ---------------------------------------------------------------------------

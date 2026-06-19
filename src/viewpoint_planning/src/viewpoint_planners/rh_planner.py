@@ -74,11 +74,12 @@ class RHPlanner:
         # Axis-aligned camera bounds.
         # MATCHED EXACTLY to GradientNBVPlanner's camera box so both planners
         # search the same physical camera workspace (fair comparison). Burusa's
-        # planner uses start_pose +/- [0.2, 0.1, 0.15]; we mirror that here
+        # planner uses start_pose +/- CAMERA_BOUNDS_HALFWIDTHS; we mirror that here
         # instead of the old target +/- r_max cube. The shell (if re-enabled via
         # use_spherical_bounds) still uses r_min/r_max independently.
         start_np = np.asarray(start_pose[:3], dtype=np.float32)
-        bounds_halfwidths = np.array([0.2, 0.1, 0.15], dtype=np.float32)
+        from viewpoint_planners.fair_comparison_config import CAMERA_BOUNDS_HALFWIDTHS
+        bounds_halfwidths = CAMERA_BOUNDS_HALFWIDTHS
         self.camera_bounds = torch.tensor(
             [
                 (start_np - bounds_halfwidths).tolist(),
@@ -535,7 +536,8 @@ class RHPlanner:
     # Occluded recall
     def set_occluded_mesh_points(self):
         voxel_points, _, _ = self.get_occupied_points()
-        half   = 0.02
+        vsize = float(np.asarray(self.voxel_grid.voxel_size.detach().cpu().numpy()).reshape(-1)[0])
+        half   = vsize * 4.0
         radius = half * np.sqrt(3)
         if len(voxel_points) == 0:
             self.occluded_mesh_points = self.mesh_coordinates.copy()
@@ -562,7 +564,8 @@ class RHPlanner:
         if len(voxel_points) == 0:
             return 0.0
         voxel_tree = KDTree(voxel_points)
-        half       = 0.02
+        vsize      = float(np.asarray(self.voxel_grid.voxel_size.detach().cpu().numpy()).reshape(-1)[0])
+        half       = vsize * 4.0
         radius     = half * np.sqrt(3)
         recovered  = 0
         for coord in self.occluded_mesh_points:

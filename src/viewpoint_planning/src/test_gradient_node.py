@@ -84,7 +84,7 @@ def get_mesh_coordinates():
     vertices = np.array(raw).reshape(-1, 3)
     vertices_swapped = vertices[:, [0, 2, 1]]
     scale = np.array([-1.2, 1.2, 1.2])
-    z_corr = float(os.environ.get("MESH_Z_CORR", 0.048))
+    z_corr = float(os.environ.get("MESH_Z_CORR", 0.0))
     translation = np.array([0.5, -0.25, 1.0 - z_corr])
     #translation = np.array([
     #        TARGET_POSITION[0],
@@ -147,6 +147,10 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
         mesh_tree=mesh_tree,
     )
 
+    # Set occluded baseline on the empty grid (before any planning) so
+    # that every planner starts from an identical 100% occluded baseline.
+    planner.set_occluded_mesh_points()
+
     coverages = [0.0]; recalls = [0.0]; precisions = [0.0]
     distances = [0.0]; times = [0.0]; ray_calls = [0]
     tp = [0]; fp = [0]; fn = [0]
@@ -173,8 +177,6 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
             d = math.sqrt(sum((viewpoint[k]-trail[-1][k])**2 for k in range(3)))
             trail.append(viewpoint[:3].copy())
             distances.append(distances[-1] + d)
-            if planner.occluded_mesh_points is None:
-                planner.set_occluded_mesh_points()
         else:
             cov = coverages[-1]
             voxels_seen.append(voxels_seen[-1])
@@ -198,10 +200,7 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
         sigmas.append(planner.compute_sigma())
         occ_recalls.append(planner.compute_occluded_recall())
 
-        snap = (planner.all_target_voxels
-                if getattr(planner, "all_target_voxels", None) is not None
-                and len(planner.all_target_voxels) > 0
-                else planner.target_voxels)
+        snap = planner.target_voxels
         recon_snapshots.append(
             snap.copy() if isinstance(snap, np.ndarray) and snap.ndim == 2
             else np.zeros((0, 3)))
@@ -248,10 +247,7 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
     ), "trajectory")
 
     _try(lambda: plot_reconstruction_comparison(
-        target_voxels=(planner.all_target_voxels
-                       if getattr(planner, "all_target_voxels", None) is not None
-                       and len(planner.all_target_voxels) > 0
-                       else planner.target_voxels),
+        target_voxels=planner.target_voxels,
         mesh_coordinates=mesh_coords,
         save_path=os.path.join(trial_dir, f"reconstruction_gradientnbv_{occ}.png"),
         method_label="GradientNBV",

@@ -101,6 +101,10 @@ class ViewpointPlanning:
         self.fn_rh = np.array([0])
         self._diagnose_f1 = False
 
+        # Set occluded baseline on the empty grid (before any planning) so
+        # that every planner starts from an identical 100% occluded baseline.
+        self.rh_planner.set_occluded_mesh_points()
+
         print(
             f"[RH] K={self.rh_planner.num_candidates}, "
             f"H={self.rh_planner.horizon} -> "
@@ -192,8 +196,6 @@ class ViewpointPlanning:
                 )
             else:
                 coverage = self.coverages_rh[-1] if len(self.coverages_rh) > 0 else 0.0
-            if self.rh_planner.occluded_mesh_points is None:
-                self.rh_planner.set_occluded_mesh_points()
             self.coverages_rh = np.append(self.coverages_rh, coverage)
             self.voxels_seen_rh = np.append(self.voxels_seen_rh, self.rh_planner.voxel_grid.n_seen)
             self.voxels_total_rh = np.append(self.voxels_total_rh, self.rh_planner.voxel_grid.n_total)
@@ -317,7 +319,7 @@ class ViewpointPlanning:
         vertices = np.array(raw_data).reshape(-1, 3)
         vertices_swapped = vertices[:, [0, 2, 1]]
         scale = np.array([-1.2, 1.2, 1.2])
-        z_corr = float(os.environ.get("MESH_Z_CORR", 0.048))
+        z_corr = float(os.environ.get("MESH_Z_CORR", 0.0))
         translation = np.array([0.5, -0.25, 1.0 - z_corr])
         transformed_coords = vertices_swapped * scale + translation
         mesh_tree = KDTree(transformed_coords)
