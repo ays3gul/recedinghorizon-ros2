@@ -16,13 +16,22 @@ import numpy as np
 
 # ---------------------------------------------------------------------------
 # Target node (centre of the ROI on the object surface).
-# Camera starts near Y=-0.05 and looks toward -Y, so this point is observable.
+# Camera starts at Y=+0.20 (target_y + 0.60 m standoff) and looks toward -Y.
 # ---------------------------------------------------------------------------
 def get_target_position() -> np.ndarray:
     tp_env = os.environ.get("TARGET_POS")
     if tp_env:
         return np.array([float(v) for v in tp_env.split(",")])
-    return np.array([0.5, -0.25, 1.1])
+    target = os.environ.get("TARGET", "bunny").lower()
+    if target == "tomato":
+        # Fruit1-4 centroid in world space (pose=0.5 -0.50 0.9, scale=0.4)
+        return np.array([0.50, -0.50, 1.16])
+    # Bunny spawn (0.50, -0.30, 1.0). COLLADA node matrix gives world Z∈[0.980,1.165],
+    # geometric centre Z=1.073. ROI z=1.073±0.075=[0.998,1.148] covers 97% of bunny height.
+    # Camera starts at y=-0.30+0.60=+0.30. Workspace y∈[+0.20,+0.40].
+    # Camera-bunny y∈[0.50,0.70m] = D455 ideal range.
+    return np.array([0.50, -0.30, 1.07])
+
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +52,7 @@ VOXEL_SIZE = np.array([0.003])
 # occupancy shell sitting ~9-13mm off the continuous mesh surface (true for
 # BOTH planners in this setup). Identical for both => fair.
 # ---------------------------------------------------------------------------
-ROI_HALF        = float(os.environ.get("ROI_HALF", 0.075))
+ROI_HALF        = float(os.environ.get("ROI_HALF", 0.095))  # ±31 voxels @ 3mm = 93mm ≈ bunny z_max
 F1_THRESH_SCALE = 4.0  # x voxel_size
 
 
@@ -51,7 +60,11 @@ F1_THRESH_SCALE = 4.0  # x voxel_size
 # Axis-aligned camera workspace: start_pose +/- this half-width.
 # This is Burusa's GradientNBV box; RH mirrors it exactly in rh_planner.py.
 # ---------------------------------------------------------------------------
-CAMERA_BOUNDS_HALFWIDTHS = np.array([0.2, 0.2, 0.25], dtype=np.float32)
+# UR5e + D455. Bunny at y=-0.30, standoff 0.60 m → start_y=+0.30. With ±0.10
+# bounds in y, camera-bunny stays in [0.50, 0.70 m] = D455 ideal range exactly.
+# x_hw=0.28: camera reaches x=[0.22,0.78], 25° side-view angle.
+# z_hw=0.22: camera reaches z=[0.85,1.29], top-down views of bunny back/ears.
+CAMERA_BOUNDS_HALFWIDTHS = np.array([0.28, 0.10, 0.22], dtype=np.float32)
 
 
 # ---------------------------------------------------------------------------

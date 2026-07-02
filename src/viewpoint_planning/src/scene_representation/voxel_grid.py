@@ -3,6 +3,7 @@ Author: Akshay K. Burusa
 Maintainer: Akshay K. Burusa
 """
 
+import os
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -11,6 +12,15 @@ import matplotlib.pyplot as plt
 from scene_representation.raysampler import RaySampler
 from utils.torch_utils import look_at_rotation, transform_from_rotation_translation
 import open3d as o3d
+
+try:
+    from fair_comparison_config import ROI_HALF as _ROI_HALF, VOXEL_SIZE as _VOXEL_SIZE
+except ModuleNotFoundError:
+    try:
+        from viewpoint_planners.fair_comparison_config import ROI_HALF as _ROI_HALF, VOXEL_SIZE as _VOXEL_SIZE
+    except ModuleNotFoundError:
+        _ROI_HALF = float(os.environ.get("ROI_HALF", 0.095))
+        _VOXEL_SIZE = np.array([0.003])
 
 class VoxelGrid:
     """
@@ -29,8 +39,8 @@ class VoxelGrid:
         fy: float,
         cx: float,
         cy: float,
-        z_near: float = 0.05,
-        z_far: float = 0.6,
+        z_near: float = 0.40,  # D455 minimum reliable depth at 640x480 (0.40 m)
+        z_far: float = 1.2,    # covers camera-to-far-grid-face at 0.60 m standoff
         target_params: torch.tensor = None,
         num_pts_per_ray: int = 128,
         num_features: int = 4,
@@ -89,6 +99,8 @@ class VoxelGrid:
         self.n_target_roi = n_target_roi  # unique mesh voxels in ROI — coverage denominator
         self.n_seen = 0    # voxels seen so far (updated by insert_depth_and_semantics)
         self.n_total = 0   # total ROI voxels (denominator)
+        self.n_semantic_seen = 0   # ROI voxels where p_s > 0.5 (bunny positively detected)
+        self.semantic_coverage = 0.0   # high-water mark: never decreases
         # Define regions of interest around the target
         self.set_target_roi(target_params)
 
@@ -207,21 +219,34 @@ class VoxelGrid:
         if occupied_mask.any():
             self.voxel_grid[gx[occupied_mask], gy[occupied_mask], gz[occupied_mask], 3] = sem_labels[occupied_mask]
         # ROI coverage (Burusa et al. 2024, Sec. VI.B.1):
-        # percentage of ROI voxels viewed by the camera from at least one viewpoint,
-        # out of ALL voxels in the ROI. Channel 2 is initialised to 0.5 inside the ROI
-        # and moves away from 0.5 whenever a ray passes through — so != 0.5 means "viewed."
+        # Uses p_occ (ch1) NOT p_sem (ch2). p_occ != 0.5 means a depth ray hit OR
+        # traversed this voxel — any physical observation. p_sem != 0.5 also fires on
+        # free-space semantic updates (semantic label=0 rays that crossed the ROI),
+        # causing false "seen" counts when the bunny turns white. p_occ is the correct
+        # channel for Burusa's "any ray observed this voxel" definition.
         if self.target_bounds is not None:
-            target_voxels = self.voxel_grid[
+            occ_voxels = self.voxel_grid[
                 self.target_bounds[0]:self.target_bounds[3],
                 self.target_bounds[1]:self.target_bounds[4],
                 self.target_bounds[2]:self.target_bounds[5],
-                2,
+                1,  # ch1 = p_occ (occupancy), not ch2 = p_sem (semantic)
             ]
-            n_seen = torch.sum((target_voxels != 0.5))
-            n_total = target_voxels.numel()
+            sem_voxels = self.voxel_grid[
+                self.target_bounds[0]:self.target_bounds[3],
+                self.target_bounds[1]:self.target_bounds[4],
+                self.target_bounds[2]:self.target_bounds[5],
+                2,  # ch2 = p_sem
+            ]
+            n_seen = torch.sum((occ_voxels != 0.5))
+            n_total = occ_voxels.numel()
             self.n_seen = int(n_seen.item())
             self.n_total = int(n_total)
             coverage = self.n_seen / float(n_total) * 100
+            # Semantic coverage: high-water mark of ROI voxels with p_s > 0.5 (bunny detected).
+            # Uses max() so it never decreases when subsequent views don't see the bunny.
+            n_semantic_seen = int(torch.sum(sem_voxels > 0.5).item())
+            self.n_semantic_seen = max(self.n_semantic_seen, n_semantic_seen)
+            self.semantic_coverage = self.n_semantic_seen / float(n_total) * 100
             return coverage
 
     def compute_gain(
@@ -291,12 +316,13 @@ class VoxelGrid:
         target_coords = torch.div(
             target_params - self.origin, self.voxel_size, rounding_mode="floor"
         ).to(torch.long)
-        x_min = torch.clamp(target_coords[0] - 25, 0, self.voxel_dims[0])
-        x_max = torch.clamp(target_coords[0] + 25, 0, self.voxel_dims[0])
-        y_min = torch.clamp(target_coords[1] - 25, 0, self.voxel_dims[1])
-        y_max = torch.clamp(target_coords[1] + 25, 0, self.voxel_dims[1])
-        z_min = torch.clamp(target_coords[2] - 25, 0, self.voxel_dims[2])
-        z_max = torch.clamp(target_coords[2] + 25, 0, self.voxel_dims[2])
+        _roi_vox = int(float(os.environ.get("ROI_HALF", _ROI_HALF)) / float(_VOXEL_SIZE[0]))
+        x_min = torch.clamp(target_coords[0] - _roi_vox, 0, self.voxel_dims[0])
+        x_max = torch.clamp(target_coords[0] + _roi_vox, 0, self.voxel_dims[0])
+        y_min = torch.clamp(target_coords[1] - _roi_vox, 0, self.voxel_dims[1])
+        y_max = torch.clamp(target_coords[1] + _roi_vox, 0, self.voxel_dims[1])
+        z_min = torch.clamp(target_coords[2] - _roi_vox, 0, self.voxel_dims[2])
+        z_max = torch.clamp(target_coords[2] + _roi_vox, 0, self.voxel_dims[2])
         self.voxel_grid[x_min:x_max, y_min:y_max, z_min:z_max, 0] = 1
         self.voxel_grid[x_min:x_max, y_min:y_max, z_min:z_max, 2] = 0.5
         self.target_bounds = torch.tensor(

@@ -26,19 +26,25 @@ import ros2_node  # singleton node + spin thread; must be first
 from abb_control.arm_control_client import ArmControlClient
 from utils.py_utils import numpy_to_pose, look_at_rotation
 
-# Robot base is at origin. Current bunny is [0.5,-0.4,1.0].
-# Candidate centers pull the bunny toward the robot (smaller |y|, maybe smaller x).
+# Real UR5e (0.85 m reach, base at world origin on a 0.525 m pedestal) + real
+# D455 (min 0.40 m, ideal 0.60 m), eye-in-hand, scanning a real object (e.g. a
+# coffee mug ~0.1 m) on the table. Goal: find the (position, standoff) where the
+# arm can orbit the object the most, at a D455-VALID standoff — so a mug placed
+# there causes no reachability/blind-zone problems.
+#
+# Candidates span table positions and heights (z = mug-center height). Lower z is
+# nearer the arm's comfortable working height (shoulder ~0.69 m).
 CANDIDATES = {
-    "cur_050_-040": np.array([0.50, -0.40, 1.0]),   # current (baseline ref)
-    "y_050_-030":   np.array([0.50, -0.30, 1.0]),
-    "y_050_-020":   np.array([0.50, -0.20, 1.0]),
-    "xy_045_-020":  np.array([0.45, -0.20, 1.0]),
-    "xy_045_-025":  np.array([0.45, -0.25, 1.0]),
+    "x050_y-030_z100": np.array([0.50, -0.30, 1.00]),  # current table height
+    "x050_y-030_z090": np.array([0.50, -0.30, 0.90]),
+    "x050_y-030_z085": np.array([0.50, -0.30, 0.85]),
+    "x055_y-035_z095": np.array([0.55, -0.35, 0.95]),
+    "x045_y-025_z090": np.array([0.45, -0.25, 0.90]),
+    "x060_y-030_z090": np.array([0.60, -0.30, 0.90]),
 }
 
-# Orbit radius around the candidate center. Smaller = camera closer, easier
-# to reach around. We test one moderate radius; can rerun with others.
-RADIUS = 0.25
+# D455-VALID orbit radii (standoff): 0.40 = min, 0.50 = comfortable, 0.60 = ideal.
+RADII = [0.40, 0.50, 0.60]
 Z_OFF = 0.05
 
 # Azimuth samples (deg). 12 steps = every 30 deg (faster than 16).
@@ -73,60 +79,65 @@ def main():
 
     f = open("reach_map_multi_results.csv", "w", newline="")
     w = csv.writer(f)
-    w.writerow(["candidate", "cx", "cy", "az_deg", "x", "y", "z", "reachable"])
+    w.writerow(["candidate", "cx", "cy", "cz", "radius", "az_deg", "x", "y", "z", "reachable"])
     f.flush()
 
-    print(f"\n[reach_map_multi] radius={RADIUS} z_off=+{Z_OFF}  azimuth step={360/N_AZ:.0f}deg\n")
+    print(f"\n[reach_map_multi] radii={RADII} z_off=+{Z_OFF}  azimuth step={360/N_AZ:.0f}deg\n")
 
-    per_cand = {}
+    per_combo = {}   # (name, radius) -> (C, reached_azimuths)
     for name, C in CANDIDATES.items():
-        print(f"\n=== candidate {name}  center={C} ===")
-        arm.move_arm_to_pose(numpy_to_pose(HOME)); time.sleep(0.5)
+        for radius in RADII:
+            print(f"\n=== {name}  center={C}  radius={radius:.2f} ===")
+            arm.move_arm_to_pose(numpy_to_pose(HOME)); time.sleep(0.5)
 
-        reached = []
-        consec = 0
-        skipped = False
-        for az in AZIMUTHS:
-            if skipped:
-                break
-            cam = cam_on_circle(C, RADIUS, az, Z_OFF)
-            pose = pose_looking_at(cam, C)
-            ok = arm.move_arm_to_pose(numpy_to_pose(pose))
-            w.writerow([name, f"{C[0]:.2f}", f"{C[1]:.2f}", f"{az:.0f}",
-                        f"{cam[0]:.3f}", f"{cam[1]:.3f}", f"{cam[2]:.3f}",
-                        int(bool(ok))]); f.flush()
-            print(f"    az={az:5.0f} ({cam[0]:+.2f},{cam[1]:+.2f},{cam[2]:+.2f}) -> "
-                  f"{'REACH' if ok else 'FAIL'}")
-            if ok:
-                reached.append(az); consec = 0
-            else:
-                consec += 1
-            if consec >= MAX_CONSEC_FAIL:
-                print(f"    {MAX_CONSEC_FAIL} consecutive fails -> re-home, next candidate")
-                arm.move_arm_to_pose(numpy_to_pose(HOME)); time.sleep(0.5)
-                skipped = True
-            time.sleep(0.2)
+            reached = []
+            consec = 0
+            skipped = False
+            for az in AZIMUTHS:
+                if skipped:
+                    break
+                cam = cam_on_circle(C, radius, az, Z_OFF)
+                pose = pose_looking_at(cam, C)
+                ok = arm.move_arm_to_pose(numpy_to_pose(pose))
+                w.writerow([name, f"{C[0]:.2f}", f"{C[1]:.2f}", f"{C[2]:.2f}",
+                            f"{radius:.2f}", f"{az:.0f}",
+                            f"{cam[0]:.3f}", f"{cam[1]:.3f}", f"{cam[2]:.3f}",
+                            int(bool(ok))]); f.flush()
+                print(f"    az={az:5.0f} ({cam[0]:+.2f},{cam[1]:+.2f},{cam[2]:+.2f}) -> "
+                      f"{'REACH' if ok else 'FAIL'}")
+                if ok:
+                    reached.append(az); consec = 0
+                else:
+                    consec += 1
+                if consec >= MAX_CONSEC_FAIL:
+                    print(f"    {MAX_CONSEC_FAIL} consecutive fails -> re-home, next combo")
+                    arm.move_arm_to_pose(numpy_to_pose(HOME)); time.sleep(0.5)
+                    skipped = True
+                time.sleep(0.2)
 
-        per_cand[name] = (C, reached)
+            per_combo[(name, radius)] = (C, reached)
 
     f.close()
 
     # ---- Summary -------------------------------------------------------
-    print("\n" + "=" * 64)
-    print(f"  REACHABLE ORBIT ARC per candidate  (radius={RADIUS})")
-    print("  az: 0=front 90=right 180=behind 270=left")
-    print("=" * 64)
-    best_name, best_n = None, -1
-    for name, (C, azs) in per_cand.items():
+    print("\n" + "=" * 70)
+    print("  REACHABLE ORBIT ARC per (position, standoff)")
+    print("  az: 0=front(+Y) 90=right(+X) 180=behind(-Y) 270=left(-X)")
+    print("=" * 70)
+    best_combo, best_n = None, -1
+    for (name, radius), (C, azs) in per_combo.items():
         n = len(azs)
-        arc = (f"{n}/{N_AZ} poses  az=[{','.join(f'{a:.0f}' for a in azs)}]"
-               if n else "NONE")
-        print(f"  {name:<16} center=({C[0]:.2f},{C[1]:.2f}): {arc}")
+        arc = (f"{n}/{N_AZ}  az=[{','.join(f'{a:.0f}' for a in azs)}]" if n else "NONE")
+        print(f"  {name:<18} r={radius:.2f}: {arc}")
         if n > best_n:
-            best_name, best_n = name, n
-    print("=" * 64)
-    print(f"\n  WIDEST ARC: {best_name}  ({best_n}/{N_AZ} reachable)")
-    print(f"  -> move the bunny here, then size the reach box to this arc.")
+            best_combo, best_n = (name, radius), n
+    print("=" * 70)
+    if best_combo:
+        (bname, bradius) = best_combo
+        bC = CANDIDATES[bname]
+        print(f"\n  WIDEST ARC: {bname} @ standoff {bradius:.2f} m  ({best_n}/{N_AZ})")
+        print(f"  -> object center {bC.tolist()}, D455-valid standoff {bradius:.2f} m.")
+        print(f"     Put the mug here; size the reach box / start distance to this.")
     print(f"  csv -> reach_map_multi_results.csv")
 
 

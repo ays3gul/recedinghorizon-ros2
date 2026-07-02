@@ -12,6 +12,7 @@ from viewpoint_planners.planner_eval_mixin import PlannerEvalMixin, init_eval_st
 from viewpoint_planners.fair_comparison_config import (
     GRID_SIZE as FC_GRID_SIZE,
     VOXEL_SIZE as FC_VOXEL_SIZE,
+    CAMERA_BOUNDS_HALFWIDTHS,
 )
 
 
@@ -88,9 +89,10 @@ class PsoPlanner(PlannerEvalMixin):
         np.random.seed(int(time.time()))
 
         random_values = np.random.rand(self.n_particles, 3)
-        random_values[:, 0] = random_values[:, 0] * 0.4 + start_pose[0] - 0.2
-        random_values[:, 1] = random_values[:, 1] * 0.4 + start_pose[1] - 0.2
-        random_values[:, 2] = random_values[:, 2] * 0.5 + start_pose[2] - 0.25
+        bx, by, bz = float(CAMERA_BOUNDS_HALFWIDTHS[0]), float(CAMERA_BOUNDS_HALFWIDTHS[1]), float(CAMERA_BOUNDS_HALFWIDTHS[2])
+        random_values[:, 0] = random_values[:, 0] * (2*bx) + start_pose[0] - bx
+        random_values[:, 1] = random_values[:, 1] * (2*by) + start_pose[1] - by
+        random_values[:, 2] = random_values[:, 2] * (2*bz) + start_pose[2] - bz
 
         self.X = torch.tensor(
             random_values, dtype=torch.float32, device=self.device,
@@ -147,11 +149,12 @@ class PsoPlanner(PlannerEvalMixin):
         self.target_params = torch.tensor(
             target_params, dtype=torch.float32, device=self.device,
         )
+        bx, by, bz = float(CAMERA_BOUNDS_HALFWIDTHS[0]), float(CAMERA_BOUNDS_HALFWIDTHS[1]), float(CAMERA_BOUNDS_HALFWIDTHS[2])
         self.camera_bounds = torch.tensor(
             [
-                [start_pose[0] - 0.2, start_pose[1] - 0.2, start_pose[2] - 0.25,
+                [start_pose[0] - bx, start_pose[1] - by, start_pose[2] - bz,
                  target_params[0] - 0.1, target_params[1] - 0.1, target_params[2] - 0.1],
-                [start_pose[0] + 0.2, start_pose[1] + 0.2, start_pose[2] + 0.25,
+                [start_pose[0] + bx, start_pose[1] + by, start_pose[2] + bz,
                  target_params[0] + 0.1, target_params[1] + 0.1, target_params[2] + 0.1],
             ],
             dtype=torch.float32, device=self.device,
@@ -167,8 +170,6 @@ class PsoPlanner(PlannerEvalMixin):
         coverage = self.voxel_grid.insert_depth_and_semantics(
             depth_image, semantics, transform
         )
-        if coverage is not None:
-            coverage = coverage.cpu().numpy()
         return coverage
 
     def update(self) -> np.array:

@@ -75,43 +75,50 @@ TARGET_POSITION = fc_get_target_position()
 
 def get_mesh_coordinates():
     """Identical mesh transform to viewpoint_planning.py (fair GT)."""
-    file_path = "/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes/bunny.dae"
-    tree = ET.parse(file_path)
-    root = tree.getroot()
+    meshes = "/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes"
     ns = {"ns": "http://www.collada.org/2005/11/COLLADASchema"}
-    arr = root.find(".//ns:float_array[@id='bun_zipper-mesh-positions-array']", ns)
-    raw = list(map(float, arr.text.split()))
-    vertices = np.array(raw).reshape(-1, 3)
-    vertices_swapped = vertices[:, [0, 2, 1]]
-    scale = np.array([-1.2, 1.2, 1.2])
-    z_corr = float(os.environ.get("MESH_Z_CORR", 0.0))
-    translation = np.array([0.5, -0.25, 1.0 - z_corr])
-    #translation = np.array([
-    #        TARGET_POSITION[0],
-     #       TARGET_POSITION[1],
-     #       TARGET_POSITION[2] - 0.10 - z_corr
-    #])
-    coords = vertices_swapped * scale + translation
+    target = os.environ.get("TARGET", "bunny").lower()
+
+    if target == "mug":
+        root = ET.parse(f"{meshes}/coffee_mug.dae").getroot()
+        arr = root.find(".//ns:float_array[@id='coffee_mug-mesh-positions-array']", ns)
+        vertices = np.array(list(map(float, arr.text.split()))).reshape(-1, 3)
+        coords = vertices + np.array([0.5, -0.30, 1.0])
+    elif target == "tomato":
+        root = ET.parse(f"{meshes}/tomato6.dae").getroot()
+        fruit_nodes = {"Fruit1", "Fruit2", "Fruit3", "Fruit4"}
+        fruit_arr_ids = set()
+        for node in root.findall(".//ns:visual_scene//ns:node", ns):
+            if node.get("name", "") in fruit_nodes:
+                for inst in node.findall(".//ns:instance_geometry", ns):
+                    url = inst.get("url", "").lstrip("#")
+                    fruit_arr_ids.add(url.replace("-mesh", "") + "-mesh-positions-array")
+        all_verts = []
+        for fa in root.findall(".//ns:float_array", ns):
+            if fa.get("id", "") in fruit_arr_ids:
+                verts = np.array(list(map(float, fa.text.split()))).reshape(-1, 3)
+                all_verts.append(verts)
+        vertices = np.vstack(all_verts)
+        # COLLADA Y-up → Gazebo Z-up: world=(dae_x, -dae_z, dae_y)
+        vertices_converted = np.column_stack([vertices[:, 0], -vertices[:, 2], vertices[:, 1]])
+        coords = vertices_converted * 0.4 + np.array([0.5, -0.50, 0.9])
+    else:
+        root = ET.parse(f"{meshes}/bunny.dae").getroot()
+        arr = root.find(".//ns:float_array[@id='bun_zipper-mesh-positions-array']", ns)
+        vertices = np.array(list(map(float, arr.text.split()))).reshape(-1, 3)
+        vertices_converted = np.column_stack([
+            -vertices[:, 0],
+            vertices[:, 2],
+            vertices[:, 1] - 0.05,
+        ])
+        scale = np.array([1.2, 1.2, 1.2])
+        coords = vertices_converted * scale + np.array([0.5, -0.30, 1.0])
+
     return coords, KDTree(coords)
 
 
 def spawn_occlusion(sdf, occ):
-    if occ == "none":
-        pass
-    elif occ == "frontal":
-        sdf.spawn_named_model(np.array([0.5, -0.15, 1.12]), 1, "panel_front")
-    elif occ == "half_box":
-        sdf.spawn_named_model(np.array([0.40, -0.25, 1.10]), 1, "panel_side")
-        sdf.spawn_named_model(np.array([0.64, -0.25, 1.10]), 2, "panel_side")
-        sdf.spawn_named_model(np.array([0.50, -0.36, 1.10]), 3, "panel_back")
-    elif occ == "tunnel":
-        sdf.spawn_named_model(np.array([0.43, -0.25, 1.10]), 1, "panel_tunnel")
-        sdf.spawn_named_model(np.array([0.57, -0.25, 1.10]), 2, "panel_tunnel")
-    elif occ == "well":
-        sdf.spawn_named_model(np.array([0.40, -0.25, 1.08]), 1, "panel_side_low")
-        sdf.spawn_named_model(np.array([0.64, -0.25, 1.08]), 2, "panel_side_low")
-        sdf.spawn_named_model(np.array([0.52, -0.13, 1.08]), 3, "panel_front_low")
-        sdf.spawn_named_model(np.array([0.52, -0.37, 1.08]), 4, "panel_front_low")
+    pass  # panels defined in world SDF files (ur5e_world_<occ>.sdf)
 
 
 def make_run_dir(occ):
@@ -151,7 +158,7 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
     # that every planner starts from an identical 100% occluded baseline.
     planner.set_occluded_mesh_points()
 
-    coverages = [0.0]; recalls = [0.0]; precisions = [0.0]
+    coverages = [0.0]; sem_coverages = [0.0]; recalls = [0.0]; precisions = [0.0]
     distances = [0.0]; times = [0.0]; ray_calls = [0]
     tp = [0]; fp = [0]; fn = [0]
     sigmas = [0.0]; occ_recalls = [0.0]
@@ -166,12 +173,19 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
         ok = arm.move_arm_to_pose(numpy_to_pose(viewpoint))
         time.sleep(1.0)  # ROS 2: time.sleep instead of rospy.sleep
         if ok:
+            # Use commanded viewpoint for integration. The TF actual pose
+            # (camera_color_frame) uses z=forward in Gazebo, but T_oc expects
+            # x=forward — mismatched convention causes ~43% FP. Commanded pose
+            # from look_at_rotation (ref=[1,0,0]) is internally consistent with
+            # T_oc and gives precision ~0.99 (verified June 9 runs).
+            integ_vp = viewpoint
             depth, _, sem = perceiver.run()
             if depth is not None and sem is not None:
-                cov = planner.update_voxel_grid(depth, sem, viewpoint)
+                cov = planner.update_voxel_grid(depth, sem, integ_vp)
                 cov = float(cov) if cov is not None else coverages[-1]
             else:
                 cov = coverages[-1]
+            sem_cov = planner.voxel_grid.semantic_coverage
             voxels_seen.append(planner.voxel_grid.n_seen)
             voxels_total.append(planner.voxel_grid.n_total)
             d = math.sqrt(sum((viewpoint[k]-trail[-1][k])**2 for k in range(3)))
@@ -179,18 +193,36 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
             distances.append(distances[-1] + d)
         else:
             cov = coverages[-1]
+            sem_cov = sem_coverages[-1]
             voxels_seen.append(voxels_seen[-1])
             voxels_total.append(voxels_total[-1])
             distances.append(distances[-1])
         coverages.append(cov)
+        sem_coverages.append(sem_cov)
         times.append(times[-1] + (time.time() - t0))
 
         diag = (EXPERIMENT == "D" and i == NUM_ITERS - 1)
         occ_positions = None
         if occ == "tunnel":
             occ_positions = [
-                (np.array([0.43, -0.25, 1.10]), np.array([0.012, 0.052, 0.102])),
-                (np.array([0.57, -0.25, 1.10]), np.array([0.012, 0.052, 0.102])),
+                (np.array([0.425, -0.23, 1.07]), np.array([0.035, 0.012, 0.150])),
+                (np.array([0.575, -0.23, 1.07]), np.array([0.035, 0.012, 0.150])),
+            ]
+        elif occ == "partial":
+            # panel_partial: center (0.45, -0.219, 1.07), size 0.10x0.02x0.20
+            occ_positions = [
+                (np.array([0.45, -0.219, 1.07]), np.array([0.05, 0.01, 0.10])),
+            ]
+        elif occ == "well":
+            # side_1 (0.40,-0.30,1.08) 0.02x0.22x0.16
+            # side_2 (0.64,-0.30,1.08) 0.02x0.22x0.16
+            # front  (0.52,-0.18,1.08) 0.26x0.02x0.16
+            # back   (0.52,-0.42,1.08) 0.26x0.02x0.16
+            occ_positions = [
+                (np.array([0.40, -0.30, 1.08]), np.array([0.010, 0.110, 0.080])),
+                (np.array([0.64, -0.30, 1.08]), np.array([0.010, 0.110, 0.080])),
+                (np.array([0.52, -0.18, 1.08]), np.array([0.130, 0.010, 0.080])),
+                (np.array([0.52, -0.42, 1.08]), np.array([0.130, 0.010, 0.080])),
             ]
         f1, rec, prec = planner.calculate_F1(
             occluder_positions=occ_positions, diagnose=diag)
@@ -205,10 +237,19 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
             snap.copy() if isinstance(snap, np.ndarray) and snap.ndim == 2
             else np.zeros((0, 3)))
 
-        print(f"[GradNBV] coverage={cov:.4f} | loss={float(loss):.4f} | "
-              f"F1={f1:.4f} | recall={rec:.4f} | precision={prec:.4f} | "
-              f"occ_recall={occ_recalls[-1]:.4f}")
+        print(f"[GradNBV] coverage={cov:.4f} | sem_coverage={sem_cov:.4f} | "
+              f"loss={float(loss):.4f} | F1={f1:.4f} | recall={rec:.4f} | "
+              f"precision={prec:.4f} | occ_recall={occ_recalls[-1]:.4f}")
         planner.visualize()
+
+    # DEBUG: dump reconstruction occupied points (world frame) for mesh-alignment.
+    try:
+        _occ = planner.voxel_grid.get_occupied_points()[0].detach().cpu().numpy()
+        np.save(os.path.join(trial_dir, "recon_points.npy"), _occ)
+        np.save(os.path.join(trial_dir, "mesh_coords.npy"), mesh_coords)
+        print(f"[DEBUG] saved recon_points {_occ.shape}, mesh_coords {mesh_coords.shape}")
+    except Exception as _e:
+        print("[DEBUG] recon dump failed:", _e)
 
     results = compute_all_metrics(
         coverages=coverages, recalls=recalls, precisions=precisions,
@@ -222,6 +263,7 @@ def run_single_trial(trial_idx, occ, run_dir, mesh_coords, mesh_tree,
     results["tp_series"] = tp; results["fp_series"] = fp; results["fn_series"] = fn
     results["sigma_series"] = sigmas
     results["occluded_recall_series"] = occ_recalls
+    results["semantic_coverage_series"] = sem_coverages
     save_and_print(results, prefix=os.path.join(trial_dir, "metrics"),
                    experiment=EXPERIMENT)
 

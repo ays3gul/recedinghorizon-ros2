@@ -153,9 +153,11 @@ class ViewpointSampler:
 
     def predefine_start_pose(
         self,
-        target_position: np.array = np.array([0.5, -0.4, 1.0]),
-        distance: float = 0.35,
-        #distance: float = 0.45,
+        target_position: np.array = np.array([0.5, -0.3, 1.0]),
+        distance: float = 0.60,
+        # Standoff 0.60 m: bunny at y=-0.30, start_y=+0.30.
+        # Camera bounds ±0.10 in y → y=[+0.20,+0.40] → camera-bunny y=[0.50,0.70 m],
+        # D455 ideal working range. UR5e reach confirmed by placement_test.py.
     ) -> np.ndarray:
         """
         Predefine the start pose of the camera

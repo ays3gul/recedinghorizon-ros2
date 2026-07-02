@@ -1,58 +1,62 @@
 """
 occluder_geometry.py — single source of truth for occluder visualisation.
 
-The actual occluders are spawned in Gazebo by viewpoint_planning.py
-(spawn_*_occlusion) and test_gradient_node.py (spawn_occlusion). The plotting
-code needs the SAME geometry to draw the occluders correctly in the trajectory
-and candidate-sequence figures.
-
-To avoid the drift we kept hitting (plots showing old/wrong boxes), every plot
-imports OCCLUDERS from here. If you ever move an occluder, change the spawn
-position in viewpoint_planning.py AND the matching entry here.
+Bunny at (0.50, -0.30, 1.0).  Camera starts at y=+0.30 (standoff 0.60 m).
+Panel sizes (SDF <size> = x y z, half = size/2):
+  panel_front      : 0.20x0.02x0.20  -> half (0.10, 0.01, 0.10)
+  panel_front_low  : 0.26x0.02x0.16  -> half (0.13, 0.01, 0.08)
+  panel_side       : 0.02x0.22x0.22  -> half (0.01, 0.11, 0.11)
+  panel_side_low   : 0.02x0.22x0.16  -> half (0.01, 0.11, 0.08)
+  panel_back       : 0.20x0.02x0.22  -> half (0.10, 0.01, 0.11)
+  panel_tunnel     : 0.02x0.10x0.20  -> half (0.01, 0.05, 0.10)
 
 Format: OCCLUDERS[scenario] = list of (center_xyz, half_extent_xyz).
-
-Notes on coordinates:
-  * Panels are spawned with spawn_named_model, which applies NO Z pivot
-    offset, so the panel centre is exactly the spawn position.
-  * Panels (including the frontal one) are spawned with spawn_named_model,
-    which applies NO Z pivot offset.
-  * half-extent = half the box side length (SDF <size> / 2).
+Keep in sync with spawn_*_occlusion() in viewpoint_planning.py.
 """
 
 OCCLUDERS = {
     "none": [],
 
-    # frontal: panel_front (0.20x0.02x0.14 m) at (0.5,-0.15,1.12); no collision →
-    # arm passes through freely; depth camera still sees it (visual-only geometry).
-    # Panel Z=[1.05,1.19] blocks bunny body; ears (top 3.5cm) and feet (1cm) show.
+    # frontal: back face at bunny front face y=-0.229, no penetration.
+    # Camera hits panel front (y=-0.209) before bunny (y=-0.229). 2 cm clearance.
     "frontal": [
-        ([0.50, -0.15, 1.12], (0.100, 0.010, 0.070)),
+        ([0.50, -0.219, 1.07], (0.100, 0.010, 0.100)),
     ],
 
-    # half_box: sides + back walled, front AND top open. panel_side =
-    # 0.02x0.22x0.22, panel_back = 0.20x0.02x0.22.
+    # half_box: two side walls + back wall, front and top open.
+    # panel_side (0.02x0.22x0.22) at x=0.40 and x=0.64, centred on bunny y=-0.30.
+    # panel_back (0.20x0.02x0.22) at y=-0.41 (11 cm behind bunny centre).
     "half_box": [
-        ([0.40, -0.25, 1.10], (0.010, 0.110, 0.110)),  # left  (X-)
-        ([0.64, -0.25, 1.10], (0.010, 0.110, 0.110)),  # right (X+)
-        ([0.50, -0.36, 1.10], (0.100, 0.010, 0.110)),  # back  (Y-)
+        ([0.40, -0.30, 1.10], (0.010, 0.110, 0.110)),  # left  (X-)
+        ([0.64, -0.30, 1.10], (0.010, 0.110, 0.110)),  # right (X+)
+        ([0.50, -0.41, 1.10], (0.100, 0.010, 0.110)),  # back  (Y-)
     ],
 
-    # tunnel: two thin panels with a ~12 cm corridor. panel_tunnel =
-    # 0.02x0.10x0.20 at Y=-0.25.
+    # tunnel: front + back panel pairs at x=0.425/0.575, matching
+    # ur5e_world_tunnel.sdf (panel size 0.07x0.02x0.30 -> half 0.035x0.010x0.150).
     "tunnel": [
-        ([0.43, -0.25, 1.10], (0.010, 0.050, 0.100)),  # left
-        ([0.57, -0.25, 1.10], (0.010, 0.050, 0.100)),  # right
+        ([0.425, -0.23, 1.07], (0.035, 0.010, 0.150)),  # left front
+        ([0.575, -0.23, 1.07], (0.035, 0.010, 0.150)),  # right front
+        ([0.425, -0.39, 1.07], (0.035, 0.010, 0.150)),  # left back
+        ([0.575, -0.39, 1.07], (0.035, 0.010, 0.150)),  # right back
     ],
 
-    # well: four short walls (only the top is open). panel_side_low =
-    # 0.02x0.22x0.16, panel_front_low = 0.26x0.02x0.16, centred at Z=1.08.
-    # Y-centred on the bunny at y=-0.25 (was y=-0.40, shifted +0.15 m).
+    # covered_well: four short walls + top cover at z=1.185.
+    "covered_well": [
+        ([0.40, -0.30, 1.08],  (0.010, 0.110, 0.080)),  # left  (X-)
+        ([0.64, -0.30, 1.08],  (0.010, 0.110, 0.080)),  # right (X+)
+        ([0.52, -0.18, 1.08],  (0.130, 0.010, 0.080)),  # front (Y+)
+        ([0.52, -0.42, 1.08],  (0.130, 0.010, 0.080)),  # back  (Y-)
+        ([0.52, -0.30, 1.185], (0.130, 0.110, 0.010)),  # top
+    ],
+
+    # well: four short walls (top open). panel_side_low + panel_front_low at z=1.08.
+    # Interior: x[0.41,0.63] y[-0.41,-0.19] z[1.00,1.16].
     "well": [
-        ([0.40, -0.25, 1.08], (0.010, 0.110, 0.080)),  # left  (X-)
-        ([0.64, -0.25, 1.08], (0.010, 0.110, 0.080)),  # right (X+)
-        ([0.52, -0.13, 1.08], (0.130, 0.010, 0.080)),  # front (Y+)
-        ([0.52, -0.37, 1.08], (0.130, 0.010, 0.080)),  # back  (Y-)
+        ([0.40, -0.30, 1.08], (0.010, 0.110, 0.080)),  # left  (X-)
+        ([0.64, -0.30, 1.08], (0.010, 0.110, 0.080)),  # right (X+)
+        ([0.52, -0.18, 1.08], (0.130, 0.010, 0.080)),  # front (Y+)
+        ([0.52, -0.42, 1.08], (0.130, 0.010, 0.080)),  # back  (Y-)
     ],
 }
 

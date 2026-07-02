@@ -5,20 +5,21 @@
 # running in a separate terminal:
 #   source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash
 #   export GZ_SIM_SYSTEM_PLUGIN_PATH=/opt/ros/jazzy/lib
-#   ros2 launch abb_l515_moveit_config_ros2 move_group_gz.launch.py
+#   ros2 launch ur5e_l515_description move_group_gz_ur5e.launch.py
 # Wait until arm_control is ready, then run this script.
 #
 # Usage:
-#   ./run_reach_test.sh
+#   ./run_reach_test.sh                 # runs reach_test_ur5e.py (default)
+#   REACH=reach_map.py ./run_reach_test.sh   # run a different probe script
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROS2_WS="$HOME/ros2_ws"
 CONDA_PYTHON="$HOME/miniconda3/envs/rh_nbv_ros2/bin/python"
 
-# reach_test.py is expected next to this script (same dir as run_ros2_gz.sh)
-REACH_SCRIPT="$SCRIPT_DIR/reach_map.py"
+# Probe script next to this script; defaults to the UR5e reach test.
+REACH_SCRIPT="$SCRIPT_DIR/${REACH:-reach_test_ur5e.py}"
 if [ ! -f "$REACH_SCRIPT" ]; then
-    echo "[ERROR] $REACH_SCRIPT not found. Put reach_test.py in $SCRIPT_DIR"
+    echo "[ERROR] $REACH_SCRIPT not found in $SCRIPT_DIR"
     exit 1
 fi
 
@@ -49,5 +50,5 @@ export LD_LIBRARY_PATH=/opt/ros/jazzy/lib:/opt/ros/jazzy/opt/gz_transport_vendor
 export PYTHONUNBUFFERED=1
 export USE_SIM_TIME=true
 
-echo "[run_reach_test.sh] Running reach_test.py in rh_nbv_ros2 env"
+echo "[run_reach_test.sh] Running $(basename "$REACH_SCRIPT") in rh_nbv_ros2 env"
 exec "$CONDA_PYTHON" -u "$REACH_SCRIPT" --ros-args -p use_sim_time:=true "$@"

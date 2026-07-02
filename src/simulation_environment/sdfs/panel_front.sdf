@@ -4,9 +4,11 @@
     <static>true</static>
     <link name="link">
       <pose>0 0 0 0 0 0</pose>
-      <!-- No collision: arm passes through freely; depth camera still renders it. -->
+      <collision name="collision">
+        <geometry><box><size>0.20 0.02 0.20</size></box></geometry>
+      </collision>
       <visual name="visual">
-        <geometry><box><size>0.20 0.02 0.14</size></box></geometry>
+        <geometry><box><size>0.20 0.02 0.20</size></box></geometry>
         <material>
           <ambient>0.8 0.6 0.2 1</ambient>
           <diffuse>0.8 0.6 0.2 1</diffuse>

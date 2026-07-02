@@ -30,10 +30,11 @@ import ros2_node  # singleton node + spin thread; must be first
 from abb_control.arm_control_client import ArmControlClient
 from utils.py_utils import numpy_to_pose, look_at_rotation
 
-# predefine_start_pose uses distance=0.35 along +Y
-START_DISTANCE = 0.35
-# camera motion halfwidths (current fair_comparison_config value)
-HALF = np.array([0.2, 0.1, 0.15])
+# predefine_start_pose uses distance=0.40 along +Y (D455 @848x480 Min-Z ~0.34 m,
+# UR5e reachable standoff ~0.40 m)
+START_DISTANCE = 0.40
+# camera motion halfwidths (matches fair_comparison_config CAMERA_BOUNDS_HALFWIDTHS)
+HALF = np.array([0.10, 0.10, 0.15])
 
 # Candidate bunny (target) positions: pull it toward the robot in Y.
 # x,z kept at the current target (0.5, 1.1); only Y swept.

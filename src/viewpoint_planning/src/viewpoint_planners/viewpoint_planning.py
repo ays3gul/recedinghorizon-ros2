@@ -155,22 +155,16 @@ class ViewpointPlanning:
         pass
 
     def spawn_frontal_occlusion(self):
-        self.sdf_spawner.spawn_named_model(np.array([0.5, -0.15, 1.12]), 1, "panel_front")
+        pass  # panels defined in ur5e_world_frontal.sdf
 
     def spawn_half_box_occlusion(self):
-        self.sdf_spawner.spawn_named_model(np.array([0.40, -0.25, 1.10]), 1, "panel_side")
-        self.sdf_spawner.spawn_named_model(np.array([0.64, -0.25, 1.10]), 2, "panel_side")
-        self.sdf_spawner.spawn_named_model(np.array([0.50, -0.36, 1.10]), 3, "panel_back")
+        pass  # panels defined in ur5e_world_half_box.sdf
 
     def spawn_tunnel_occlusion(self):
-        self.sdf_spawner.spawn_named_model(np.array([0.43, -0.25, 1.10]), 1, "panel_tunnel")
-        self.sdf_spawner.spawn_named_model(np.array([0.57, -0.25, 1.10]), 2, "panel_tunnel")
+        pass  # panels defined in ur5e_world_tunnel.sdf
 
     def spawn_well_occlusion(self):
-        self.sdf_spawner.spawn_named_model(np.array([0.40, -0.25, 1.08]), 1, "panel_side_low")
-        self.sdf_spawner.spawn_named_model(np.array([0.64, -0.25, 1.08]), 2, "panel_side_low")
-        self.sdf_spawner.spawn_named_model(np.array([0.52, -0.13, 1.08]), 3, "panel_front_low")
-        self.sdf_spawner.spawn_named_model(np.array([0.52, -0.37, 1.08]), 4, "panel_front_low")
+        pass  # panels defined in ur5e_world_well.sdf
 
     # -------------------------------------------------------------
     # RH execution
@@ -306,21 +300,55 @@ class ViewpointPlanning:
 
     # ---------- Mesh loading ----------
     def get_mesh_coordinates(self):
-        file_path = "/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes/bunny.dae"
-        tree = ET.parse(file_path)
-        root = tree.getroot()
-        namespaces = {"ns": "http://www.collada.org/2005/11/COLLADASchema"}
-        positions_array = root.find(
-            ".//ns:float_array[@id='bun_zipper-mesh-positions-array']", namespaces
-        )
-        if positions_array is None:
-            raise ValueError("Positions array not found in the COLLADA file.")
-        raw_data = list(map(float, positions_array.text.split()))
-        vertices = np.array(raw_data).reshape(-1, 3)
-        vertices_swapped = vertices[:, [0, 2, 1]]
-        scale = np.array([-1.2, 1.2, 1.2])
-        z_corr = float(os.environ.get("MESH_Z_CORR", 0.0))
-        translation = np.array([0.5, -0.25, 1.0 - z_corr])
-        transformed_coords = vertices_swapped * scale + translation
+        meshes = "/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes"
+        ns = {"ns": "http://www.collada.org/2005/11/COLLADASchema"}
+        target = os.environ.get("TARGET", "bunny").lower()
+
+        if target == "mug":
+            file_path = f"{meshes}/coffee_mug.dae"
+            root = ET.parse(file_path).getroot()
+            arr = root.find(".//ns:float_array[@id='coffee_mug-mesh-positions-array']", ns)
+            if arr is None:
+                raise ValueError("coffee_mug positions array not found in DAE.")
+            vertices = np.array(list(map(float, arr.text.split()))).reshape(-1, 3)
+            # coffee_mug DAE: Z-up, no axis swap, scale 1.0, placed at bunny world pos
+            translation = np.array([0.5, -0.30, 1.0])
+            transformed_coords = vertices + translation
+        elif target == "tomato":
+            file_path = f"{meshes}/tomato6.dae"
+            root = ET.parse(file_path).getroot()
+            # Only Fruit1-4 — branches/leaves are natural occluders, not ground truth
+            fruit_nodes = {"Fruit1", "Fruit2", "Fruit3", "Fruit4"}
+            fruit_arr_ids = set()
+            for node in root.findall(".//ns:visual_scene//ns:node", ns):
+                if node.get("name", "") in fruit_nodes:
+                    for inst in node.findall(".//ns:instance_geometry", ns):
+                        url = inst.get("url", "").lstrip("#")
+                        fruit_arr_ids.add(url.replace("-mesh", "") + "-mesh-positions-array")
+            all_verts = []
+            for fa in root.findall(".//ns:float_array", ns):
+                if fa.get("id", "") in fruit_arr_ids:
+                    verts = np.array(list(map(float, fa.text.split()))).reshape(-1, 3)
+                    all_verts.append(verts)
+            if not all_verts:
+                raise RuntimeError("Fruit1-4 position arrays not found in tomato6.dae")
+            vertices = np.vstack(all_verts)
+            # COLLADA Y-up → Gazebo Z-up: world=(dae_x, -dae_z, dae_y)
+            vertices_converted = np.column_stack([vertices[:, 0], -vertices[:, 2], vertices[:, 1]])
+            translation = np.array([0.5, -0.50, 0.9])
+            transformed_coords = vertices_converted * 0.4 + translation
+        else:
+            file_path = f"{meshes}/bunny.dae"
+            root = ET.parse(file_path).getroot()
+            arr = root.find(".//ns:float_array[@id='bun_zipper-mesh-positions-array']", ns)
+            if arr is None:
+                raise ValueError("bunny positions array not found in DAE.")
+            vertices = np.array(list(map(float, arr.text.split()))).reshape(-1, 3)
+            vertices_swapped = vertices[:, [0, 2, 1]]
+            scale = np.array([-1.2, 1.2, 1.2])
+            z_corr = float(os.environ.get("MESH_Z_CORR", 0.0))
+            translation = np.array([0.5, -0.25, 1.0 - z_corr])
+            transformed_coords = vertices_swapped * scale + translation
+
         mesh_tree = KDTree(transformed_coords)
         return transformed_coords, mesh_tree

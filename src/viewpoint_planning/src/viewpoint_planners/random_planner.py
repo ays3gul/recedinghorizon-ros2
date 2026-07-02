@@ -10,6 +10,7 @@ from viewpoint_planners.planner_eval_mixin import PlannerEvalMixin, init_eval_st
 from viewpoint_planners.fair_comparison_config import (
     GRID_SIZE as FC_GRID_SIZE,
     VOXEL_SIZE as FC_VOXEL_SIZE,
+    CAMERA_BOUNDS_HALFWIDTHS,
 )
 
 
@@ -81,12 +82,13 @@ class RandomPlanner(PlannerEvalMixin):
         self.target_params = torch.tensor(
             target_params, dtype=torch.float32, device=self.device,
         )
+        bx, by, bz = float(CAMERA_BOUNDS_HALFWIDTHS[0]), float(CAMERA_BOUNDS_HALFWIDTHS[1]), float(CAMERA_BOUNDS_HALFWIDTHS[2])
         self.camera_bounds = np.array(
             [
-                [start_pose[0] - 0.2, start_pose[1] - 0.2, start_pose[2] - 0.25,
-                 target_params[0] - 0.2, target_params[1] - 0.2, target_params[2] - 0.2],
-                [start_pose[0] + 0.2, start_pose[1] + 0.2, start_pose[2] + 0.25,
-                 target_params[0] + 0.2, target_params[1] + 0.2, target_params[2] + 0.2],
+                [start_pose[0] - bx, start_pose[1] - by, start_pose[2] - bz,
+                 target_params[0] - 0.1, target_params[1] - 0.1, target_params[2] - 0.1],
+                [start_pose[0] + bx, start_pose[1] + by, start_pose[2] + bz,
+                 target_params[0] + 0.1, target_params[1] + 0.1, target_params[2] + 0.1],
             ]
         )
 

@@ -3,6 +3,7 @@ import time
 import random
 import math
 import threading
+import numpy as np
 import rclpy
 from geometry_msgs.msg import Pose, Point, Quaternion
 from abb_interfaces.srv import ArmGoal
@@ -69,6 +70,25 @@ class ArmControlClient:
             return dx < pos_tol and dy < pos_tol and dz < pos_tol
         except Exception:
             return False
+
+    def get_camera_pose(self):
+        """Actual camera_color_frame pose in world as [x,y,z, w,qx,qy,qz]
+        (wxyz quat = planner/numpy_to_pose convention). None if TF unavailable.
+        Used to integrate the voxel grid at the pose the arm ACTUALLY reached,
+        not the commanded one (reduces multi-view smear from execution error)."""
+        if self._tf_buffer is None:
+            return None
+        try:
+            from rclpy.time import Time
+            t = self._tf_buffer.lookup_transform(
+                'world', 'camera_color_frame', Time(),
+                timeout=rclpy.duration.Duration(seconds=2.0)
+            )
+            tr = t.transform.translation
+            q = t.transform.rotation
+            return np.array([tr.x, tr.y, tr.z, q.w, q.x, q.y, q.z])
+        except Exception:
+            return None
 
     def move_arm_to_pose(self, pose):
         node = ros2_node.get_node()

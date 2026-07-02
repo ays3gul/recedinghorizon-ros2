@@ -6,8 +6,12 @@ import numpy as np
 from scene_representation.voxel_grid import VoxelGrid
 from utils.rviz_visualizer import RvizVisualizer
 from utils.py_utils import numpy_to_pose_array
-from utils.torch_utils import look_at_rotation, transform_from_rotation_translation
+from utils.torch_utils import look_at_rotation, transform_from_rotation_translation, quaternion_to_matrix
 from scipy.spatial import KDTree
+try:
+    from fair_comparison_config import ROI_HALF
+except ModuleNotFoundError:
+    from viewpoint_planners.fair_comparison_config import ROI_HALF
 
 
 class RHPlanner:
@@ -578,12 +582,18 @@ class RHPlanner:
         return recovered / len(self.occluded_mesh_points)
 
 
+    # D455: camera_link (Gazebo sensor) is 59mm offset from camera_color_frame (MoveIt tip).
+    # camera_link = camera_color_frame + R_cws @ [0, +0.059, 0]
+    _D455_COLOR_TO_DEPTH = torch.tensor([0.0, 0.059, 0.0])
+
     def update_voxel_grid(
         self, depth_image: np.array, semantics: torch.tensor, viewpoint: np.array
     ):
         depth_image = torch.tensor(depth_image, dtype=torch.float32, device=self.device)
         position    = torch.tensor(viewpoint[:3], dtype=torch.float32, device=self.device)
         orientation = torch.tensor(viewpoint[3:], dtype=torch.float32, device=self.device)
+        R_cws = quaternion_to_matrix(orientation[None, :])[0]
+        position = position + R_cws @ self._D455_COLOR_TO_DEPTH.to(self.device)
         transform   = transform_from_rotation_translation(
             orientation[None, :], position[None, :]
         )
@@ -644,6 +654,8 @@ class RHPlanner:
         # 1) Keep only target-class voxels (Burusa: class 0 = fruit node).
         #    sem_class may be empty/scalar in degenerate early frames — guard it.
         sem_class = np.asarray(sem_class)
+        n_class0 = int(np.sum(sem_class == 0)) if sem_class.shape[0] == voxel_points.shape[0] else -1
+        print(f"  [F1 DIAG] occupied={len(voxel_points)} class0={n_class0} class-1={int(np.sum(sem_class==-1)) if n_class0>=0 else '?'}")
         if sem_class.shape[0] == voxel_points.shape[0]:
             target_mask = (sem_class == 0)
             voxel_points = voxel_points[target_mask]
@@ -680,7 +692,7 @@ class RHPlanner:
         #    the reconstruction plot looked like a thin strip and F1/coverage
         #    disagreed. Keep both ROIs identical. Overridable via ROI_HALF env.
         target   = self.target_params.detach().cpu().numpy()
-        roi_half = float(os.environ.get("ROI_HALF", 0.075))  # half-edge in m
+        roi_half = float(os.environ.get("ROI_HALF", ROI_HALF))
         v_in_roi = np.all(np.abs(voxel_points - target) <= roi_half, axis=1)
         voxel_points = voxel_points[v_in_roi]
 

@@ -106,6 +106,10 @@ class RaySampler:
         if depth_image is not None:
             depth_image[torch.isnan(depth_image)] = self.z_far
             depth_image[torch.isinf(depth_image)] = self.z_far
+            # depth=0 or below reliable range → no valid reading; treat as z_far (free-space,
+            # no hit). Without this, depth=0 creates a "hit at camera origin" (wrong), and
+            # sub-z_near depths (e.g. D455 < 0.40 m) create false hits inside the ROI.
+            depth_image[(depth_image <= 0) | (depth_image < self.z_near)] = self.z_far
             # camera_coords is (H*W, 3) with row-major ordering (H outer, W inner):
             # element k = r*W + c → pixel (u=c, v=r). depth_image is (H, W), so a
             # plain row-major flatten gives index k = r*W + c → depth_image[r, c]. ✓

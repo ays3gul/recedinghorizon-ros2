@@ -48,34 +48,30 @@
       <real_time_update_rate>0</real_time_update_rate>
       <gravity>0 0 -9.8</gravity>
     </physics>
-    <model name='bunny'>
-      <pose>0.5 -0.30 1.0 0 0 0</pose>
+    <model name='coffee_mug'>
+      <pose>0.5 -0.4 1.0 0 0 0</pose>
       <static>0</static>
       <link name='link'>
         <gravity>0</gravity>
         <collision name='collision'>
           <geometry>
             <mesh>
-              <uri>/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes/bunny.dae</uri>
-              <scale>1.2 1.2 1.2</scale>
+              <uri>/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes/coffee_mug.dae</uri>
+              <scale>1.0 1.0 1.0</scale>
             </mesh>
           </geometry>
           <max_contacts>10</max_contacts>
           <surface>
-            <contact>
-              <ode/>
-            </contact>
+            <contact><ode/></contact>
             <bounce/>
-            <friction>
-              <ode/>
-            </friction>
+            <friction><ode/></friction>
           </surface>
         </collision>
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes/bunny.dae</uri>
-              <scale>1.2 1.2 1.2</scale>
+              <uri>/home/ayse/Desktop/RecedingHorizon/src/simulation_environment/meshes/coffee_mug.dae</uri>
+              <scale>1.0 1.0 1.0</scale>
             </mesh>
           </geometry>
           <material>

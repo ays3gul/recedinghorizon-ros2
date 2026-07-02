@@ -7,8 +7,13 @@ from scipy.spatial import KDTree
 
 from scene_representation.voxel_grid import VoxelGrid
 from utils.py_utils import numpy_to_pose, numpy_to_pose_array
-from utils.torch_utils import look_at_rotation, transform_from_rotation_translation
+from utils.torch_utils import look_at_rotation, transform_from_rotation_translation, quaternion_to_matrix
 from utils.rviz_visualizer import RvizVisualizer
+
+try:
+    from fair_comparison_config import CAMERA_BOUNDS_HALFWIDTHS, ROI_HALF
+except ModuleNotFoundError:
+    from viewpoint_planners.fair_comparison_config import CAMERA_BOUNDS_HALFWIDTHS, ROI_HALF
 
 
 class GradientNBVPlanner(nn.Module):
@@ -83,21 +88,32 @@ class GradientNBVPlanner(nn.Module):
         self.target_params = torch.tensor(
             target_params, dtype=torch.float32, device=self.device,
         )
+        bx, by, bz = float(CAMERA_BOUNDS_HALFWIDTHS[0]), float(CAMERA_BOUNDS_HALFWIDTHS[1]), float(CAMERA_BOUNDS_HALFWIDTHS[2])
         self.camera_bounds = torch.tensor(
             [
-                [start_pose[0] - 0.2, start_pose[1] - 0.2, start_pose[2] - 0.25,
+                [start_pose[0] - bx, start_pose[1] - by, start_pose[2] - bz,
                  target_params[0] - 0.1, target_params[1] - 0.1, target_params[2] - 0.1],
-                [start_pose[0] + 0.2, start_pose[1] + 0.2, start_pose[2] + 0.25,
+                [start_pose[0] + bx, start_pose[1] + by, start_pose[2] + bz,
                  target_params[0] + 0.1, target_params[1] + 0.1, target_params[2] + 0.1],
             ],
             dtype=torch.float32, device=self.device,
         )
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=0.03)
 
+    # D455 URDF: camera_color_frame is child of camera_link with origin [0,-0.059,0]
+    # in camera_link frame. MoveIt commands camera_color_frame; Gazebo depth sensor
+    # sits on camera_link. Correct the integration position to camera_link so that
+    # world_point = camera_link_pos - du*d gives the right world coordinate.
+    # camera_link = camera_color_frame - R_cws @ [0, -0.059, 0]
+    #             = camera_color_frame + R_cws @ [0, +0.059, 0]
+    _D455_COLOR_TO_DEPTH = torch.tensor([0.0, 0.059, 0.0])
+
     def update_voxel_grid(self, depth_image, semantics, viewpoint):
         depth_image = torch.tensor(depth_image, dtype=torch.float32, device=self.device)
         position = torch.tensor(viewpoint[:3], dtype=torch.float32, device=self.device)
         orientation = torch.tensor(viewpoint[3:], dtype=torch.float32, device=self.device)
+        R_cws = quaternion_to_matrix(orientation[None, :])[0]
+        position = position + R_cws @ self._D455_COLOR_TO_DEPTH.to(self.device)
         transform = transform_from_rotation_translation(
             orientation[None, :], position[None, :]
         )
@@ -174,7 +190,7 @@ class GradientNBVPlanner(nn.Module):
             self.target_voxels = np.zeros((0, 3)); return 0, 0, 0
         self.all_target_voxels = voxel_points.copy()
         target = self.target_params.detach().cpu().numpy()
-        roi_half = float(os.environ.get("ROI_HALF", 0.075))
+        roi_half = float(os.environ.get("ROI_HALF", ROI_HALF))
         voxel_points = voxel_points[np.all(np.abs(voxel_points - target) <= roi_half, axis=1)]
         roi_mesh = self.mesh_coordinates[np.all(np.abs(self.mesh_coordinates - target) <= roi_half, axis=1)]
         if len(voxel_points) == 0 or len(roi_mesh) == 0:

@@ -190,6 +190,7 @@ def run_single_trial(trial_idx, occ, run_dir):
     results["tp_series"] = vp.tp_rh.tolist()
     results["fp_series"] = vp.fp_rh.tolist()
     results["fn_series"] = vp.fn_rh.tolist()
+    results["semantic_coverage_series"] = vp.sem_coverages_rh.tolist() if hasattr(vp, "sem_coverages_rh") else []
 
     save_and_print(results, prefix=os.path.join(trial_dir, "metrics"),
                    experiment=EXPERIMENT)
